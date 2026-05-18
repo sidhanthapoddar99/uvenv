@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shellcheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: warning
+          scandir: '.'
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mise
+        run: |
+          curl https://mise.run | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install uv via mise
+        run: |
+          eval "$($HOME/.local/bin/mise activate bash)"
+          mise use -g uv@latest
+          mise use -g python@3.13
+
+      - name: Source uvenv and run smoke tests
+        run: |
+          eval "$($HOME/.local/bin/mise activate bash)"
+          # shellcheck disable=SC1091
+          source ./uvenv.sh
+
+          uvenv help
+          uvenv version
+          uvenv list
+          uvenv create -n smoketest
+          uvenv list
+          uvenv activate smoketest
+          uvenv install requests
+          python -c "import requests; print(requests.__version__)"
+          uvenv deactivate
+          uvenv remove smoketest
+          echo "OK"

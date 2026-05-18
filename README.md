@@ -1,1 +1,256 @@
 # uvenv
+
+> Named global Python venvs, backed by [mise](https://mise.jdx.dev) + [uv](https://github.com/astral-sh/uv).
+
+A ~150-line shell function that gives `mise + uv` the one ergonomic thing they're missing: named global Python environments you can activate from anywhere, conda-style — without conda.
+
+```bash
+uvenv create -n ml --python 3.14
+uvenv activate ml
+uvenv install numpy pandas
+uvenv list
+uvenv deactivate
+```
+
+Everything lives under `~/.uvenv/<name>/`. Each env is just a `uv venv` under the hood, so it's lightweight, disposable, and works with any tool that understands a regular Python venv.
+
+---
+
+## Why?
+
+`mise` manages Python versions. `uv` creates venvs anywhere. But neither has a "give me a named env I can activate from any directory" command — the conda-style `conda activate ml` workflow many people miss after moving off conda.
+
+This plugs that gap:
+
+```text
+   mise        ────►  installs Python 3.14 at ~/.local/share/mise/installs/...
+     │
+     ▼
+   uvenv       ────►  uv venv ~/.uvenv/ml --python 3.14   (uses mise's Python)
+     │
+     ▼
+   activate    ────►  source ~/.uvenv/ml/bin/activate
+```
+
+It's a shell function. No new tools. Just glue between `mise`, `uv`, and your shell.
+
+---
+
+## Prerequisites
+
+- **mise** on PATH — https://mise.run
+- **uv** installed via mise — `mise use -g uv@latest`
+- bash or zsh
+
+The installer checks for both up front; the runtime function trusts they're there.
+
+---
+
+## Install
+
+```bash
+curl -fsSL https://github.com/sidhanthapoddar99/uvenv/releases/latest/download/install.sh | bash
+```
+
+After it finishes, open a new shell (or `source ~/.config/uvenv/uvenv.sh`) and run:
+
+```bash
+uvenv help
+```
+
+### Install options
+
+The installer respects a few environment variables:
+
+| Var | Default | Meaning |
+| --- | --- | --- |
+| `UVENV_VERSION` | `latest` | Pin a specific release tag (e.g. `v0.1.0`) |
+| `UVENV_REF` | *(unset)* | Install from a branch/commit instead of a release |
+| `UVENV_PREFIX` | `~/.config/uvenv` | Where to store `uvenv.sh` |
+| `UVENV_REPO` | `sidhanthapoddar99/uvenv` | Source repo |
+
+Examples:
+
+```bash
+# Pin a version
+UVENV_VERSION=v0.1.0 curl -fsSL https://github.com/sidhanthapoddar99/uvenv/releases/latest/download/install.sh | bash
+
+# Install from main branch (bleeding edge)
+UVENV_REF=main curl -fsSL https://raw.githubusercontent.com/sidhanthapoddar99/uvenv/main/install.sh | bash
+```
+
+---
+
+## Usage
+
+### Create
+
+```bash
+uvenv create -n scratch                       # uses default Python (whatever mise points to)
+uvenv create -n ml --python 3.14              # ensures mise has 3.14, builds env against it
+uvenv create -n py312 python=3.12             # alt syntax
+```
+
+When `--python X.Y` is provided, `uvenv` runs `mise install python@X.Y` first (idempotent), then `mise exec python@X.Y -- uv venv <target>`. That way **mise is the single source of truth for Python versions** — uv never falls back to downloading its own.
+
+### Activate / deactivate
+
+```bash
+uvenv activate ml
+# ... do work ...
+uvenv deactivate
+```
+
+### Install packages into the active env
+
+```bash
+uvenv install numpy pandas
+uvenv install -r requirements.txt
+uvenv install -e .
+uvenv install "torch>=2.0,<3"
+```
+
+All arguments after `install` are forwarded directly to `uv pip install`. The only thing `uvenv install` adds is a guard: it refuses to run unless a `uvenv` env is active.
+
+### List
+
+```bash
+uvenv list
+#   ml                       python 3.14.1
+# * scratch                  python 3.14.1        ← active env
+#   py312                    python 3.12.7
+```
+
+### Remove
+
+```bash
+uvenv remove py312
+```
+
+Refuses to remove the currently-active env (deactivate first).
+
+### Other
+
+```bash
+uvenv which       # prints $UVENV_HOME
+uvenv version     # prints the uvenv version
+uvenv help        # help text
+```
+
+---
+
+## Storage
+
+```text
+~/.config/uvenv/uvenv.sh         ← the shell function (sourced from .bashrc/.zshrc)
+~/.uvenv/                         ← envs live here
+├── scratch/
+│   ├── bin/python → ~/.local/share/mise/installs/python/3.14.x/bin/python
+│   ├── lib/python3.14/site-packages/
+│   └── pyvenv.cfg
+├── ml/
+└── notebooks/
+```
+
+Override the env storage location with `UVENV_HOME=/some/path` in your environment.
+
+---
+
+## Command Reference
+
+| Command | What it does |
+| --- | --- |
+| `uvenv create -n <name> [--python X.Y]` | `mise install python@X.Y` (if specified) → `mise exec python@X.Y -- uv venv ~/.uvenv/<name>` |
+| `uvenv activate <name>` | Sources `~/.uvenv/<name>/bin/activate` in the current shell |
+| `uvenv deactivate` | Calls the built-in `deactivate` from venv |
+| `uvenv list` | Lists subfolders of `~/.uvenv/`, with Python version, marks active |
+| `uvenv remove <name>` | `rm -rf ~/.uvenv/<name>` (refuses if active) |
+| `uvenv install <pkg>...` | `uv pip install <pkg>...` into the active env |
+| `uvenv which` | Prints `$UVENV_HOME` |
+| `uvenv version` | Prints uvenv version |
+| `uvenv help` | Help text |
+
+---
+
+## Design Notes
+
+### Why a shell function, not a binary?
+
+`uvenv activate` must mutate the **current** shell's `PATH` and `$VIRTUAL_ENV`. A regular script (or compiled binary) runs in a subprocess and can't do that — the moment the process exits, env changes are lost.
+
+This is the same reason `nvm`, `pyenv`, `rbenv`, `conda activate`, and similar tools are all shell functions, not binaries. uvenv lives at `~/.config/uvenv/uvenv.sh`, sourced into your shell from `.bashrc` / `.zshrc`.
+
+### Why mise picks the Python, not uv?
+
+uv has its own Python discovery — it can download Python distributions under `~/.local/share/uv/python/` independently of mise. That's two managers fighting over the same job.
+
+uvenv resolves the question by routing through mise explicitly:
+
+```text
+uvenv create -n ml --python 3.14
+   │
+   ├── mise install python@3.14      (idempotent — installs if missing)
+   └── mise exec python@3.14 -- uv venv ~/.uvenv/ml
+                                    └── uv uses mise's Python, not its own
+```
+
+Without `--python`, uvenv just runs `uv venv ~/.uvenv/<name>` against whatever Python is on PATH — which mise controls via `mise use -g python@X.Y`. Either way, mise is the authority.
+
+### Why `uv venv` under the hood?
+
+Speed. `uv venv ~/.uvenv/<name>` is ~10× faster than `python -m venv` and integrates cleanly with `uv pip install`. The resulting env is a regular Python venv on disk — anything you can do to a normal venv works here.
+
+### Relationship to `uv tool install`
+
+`uv tool install` is for **standalone CLIs you run as commands** (`ruff`, `dstack`, `yt-dlp`). Each gets its own isolated venv with a shim on PATH.
+
+`uvenv` is for **interactive envs you enter and work in** — Jupyter notebooks, REPLs, scripts where you want `python` to mean "the Python in this env."
+
+Both are isolated global venvs, just with different ergonomics.
+
+### What `uvenv` does NOT do
+
+- **No lockfile.** These are scratch / global envs, not reproducible projects. For reproducibility, use `uv add` in a real project folder (see [uv's docs](https://docs.astral.sh/uv/)).
+- **No auto-deactivate on `cd`.** Activation is explicit, like a regular venv. Use [direnv](https://direnv.net) or shell hooks if you want auto-switching.
+- **No multi-shell coordination.** Each shell tracks its own active env via `$VIRTUAL_ENV`.
+- **No conda channel support.** This is pure pip/uv. For conda-forge packages and full Conda compatibility, look at [pixi](https://github.com/prefix-dev/pixi).
+
+---
+
+## Uninstall
+
+```bash
+# Remove uvenv itself
+rm -rf ~/.config/uvenv
+
+# Remove the source line from your rc files
+sed -i.bak '/uvenv\/uvenv.sh/d' ~/.bashrc ~/.zshrc 2>/dev/null
+
+# Remove all your envs (optional)
+rm -rf ~/.uvenv
+```
+
+---
+
+## Alternatives
+
+| Tool | Strength | Weakness |
+| --- | --- | --- |
+| **uvenv** (this) | Tiny shell wrapper over the modern stack | Bash/zsh only, no lockfiles |
+| `uv venv` directly | Already on your machine | No "named" abstraction, no central listing |
+| [pixi](https://github.com/prefix-dev/pixi) | Full Conda alternative in Rust, conda-forge support, lockfiles | Heavier; doesn't reuse mise's Pythons |
+| [Conda / Mamba](https://github.com/conda-forge/miniforge) | Most complete, scientific stack | Heavy, slow, ships its own Python |
+
+uvenv is a small fix for a small gap — *named global Python venvs on top of mise+uv*. If you want a full Conda alternative, pixi is the better choice.
+
+---
+
+## Contributing
+
+Issues and PRs welcome. Keep it small — uvenv aims to stay under 200 lines of shell.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
