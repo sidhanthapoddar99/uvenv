@@ -64,7 +64,7 @@ _uvenv_deactivate() {
             unset _OLD_VIRTUAL_PS1
         fi
         if [ -n "${_OLD_VIRTUAL_PYTHONHOME:-}" ]; then
-            PYTHONHOME="$_OLD_VIRTUAL_PYTHONHOME"
+            export PYTHONHOME="$_OLD_VIRTUAL_PYTHONHOME"
             unset _OLD_VIRTUAL_PYTHONHOME
         fi
         hash -r 2>/dev/null || true
