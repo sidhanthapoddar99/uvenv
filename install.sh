@@ -178,5 +178,5 @@ info "2. Verify:           uvenv version"
 info "3. Try it:           uvenv create -n scratch --python 3.13"
 info "4. Tab completions:  eval \"\$(uvenv completions bash)\"   # or zsh"
 echo
-info "Docs:    https://github.com/$REPO/blob/main/docs/USER_GUIDE.md"
+info "Docs:    https://github.com/$REPO/blob/main/USER_GUIDE.md"
 info "Update:  uvenv self-update"

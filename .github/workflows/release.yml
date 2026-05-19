@@ -62,8 +62,7 @@ jobs:
           TAG="${{ steps.tag.outputs.name }}"
           STAGE="uvenv-${TAG}"
           mkdir -p "$STAGE"
-          cp -r uvenv.sh install.sh VERSION LICENSE lib completions "$STAGE/"
-          [ -d docs ] && cp -r docs "$STAGE/"
+          cp -r uvenv.sh install.sh VERSION LICENSE USER_GUIDE.md lib completions "$STAGE/"
           tar -czf "uvenv-${TAG}.tar.gz" "$STAGE"
           ls -lh "uvenv-${TAG}.tar.gz"
           tar -tzf "uvenv-${TAG}.tar.gz" | head -20

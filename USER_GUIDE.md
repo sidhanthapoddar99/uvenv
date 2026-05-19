@@ -134,10 +134,34 @@ mise exec python@3.13 -- uv venv ~/.uvenv/ml
 
 If `--python` is omitted, uvenv uses whatever Python mise currently resolves.
 
-#### `uvenv activate <name>` / `uvenv deactivate`
+#### `uvenv create -l <path> [--python X.Y]`
+
+Create a venv at a local path (project-local, not global). Mise still picks
+the Python:
+
+```bash
+uvenv create -l ./venv --python 3.13
+uvenv create -l /tmp/scratch
+```
+
+Equivalent to `mise install python@X.Y` + `mise exec python@X.Y -- uv venv <path>`.
+`-n` and `-l` are mutually exclusive; the path must not already exist.
+
+#### `uvenv activate <name|path>` / `uvenv deactivate`
 
 Sources the venv's `bin/activate` (or runs `deactivate`). Works only because
 uvenv is a sourced shell function — a binary couldn't mutate your shell.
+
+```bash
+uvenv activate ml          # named global env in $UVENV_HOME
+uvenv activate ./venv      # local venv at a path
+uvenv activate /abs/path   # absolute path also works
+```
+
+Resolution: name in `$UVENV_HOME` first, then path. Prefix with `./` to force
+the path interpretation when a name might collide.
+
+`uvenv remove <name|path>` follows the same resolution rules.
 
 #### `uvenv list`
 

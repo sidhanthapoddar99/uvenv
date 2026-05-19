@@ -6,11 +6,12 @@ _uvenv_help() {
 uvenv $UVENV_VERSION — named global Python venvs (mise + uv)
 
 Usage:
-  uvenv create -n <name> [--python X.Y]   Create a named env
-  uvenv activate <name>                   Activate it in this shell
+  uvenv create -n <name> [--python X.Y]   Create a named global env
+  uvenv create -l <path> [--python X.Y]   Create a local venv at the given path
+  uvenv activate <name|path>              Activate a global env or local path
   uvenv deactivate                        Deactivate current venv
   uvenv list                              List envs (global + local + mise)
-  uvenv remove <name>                     Delete an env
+  uvenv remove <name|path>                Delete an env (global or local)
 
   uvenv install [-y] <pkg>...             uv pip install (warns if no venv)
   uvenv update <pkg>... | --all           Upgrade packages in active venv
@@ -30,7 +31,7 @@ Usage:
   uvenv help                              This help
 
 Storage: \$UVENV_HOME (default ~/.uvenv)
-Docs:    https://github.com/$UVENV_REPO/blob/main/docs/USER_GUIDE.md
+Docs:    https://github.com/$UVENV_REPO/blob/main/USER_GUIDE.md
 Repo:    https://github.com/$UVENV_REPO
 EOF
 }

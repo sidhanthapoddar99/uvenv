@@ -16,7 +16,7 @@ uvenv self-update
 
 Everything lives under `~/.uvenv/<name>/`. Each env is just a `uv venv` under the hood, so it's lightweight, disposable, and works with any tool that understands a regular Python venv.
 
-> 📖 Full tour: **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** · Contributing: **[CONTRIBUTING.md](CONTRIBUTING.md)**
+> 📖 Full tour: **[USER_GUIDE.md](USER_GUIDE.md)** · Contributing: **[CONTRIBUTING.md](CONTRIBUTING.md)**
 
 ---
 
@@ -139,6 +139,7 @@ UVENV_REF=main curl -fsSL https://raw.githubusercontent.com/sidhanthapoddar99/uv
 uvenv create -n scratch                       # uses default Python (whatever mise points to)
 uvenv create -n ml --python 3.14              # ensures mise has 3.14, builds env against it
 uvenv create -n py312 python=3.12             # alt syntax
+uvenv create -l ./venv --python 3.13          # local venv at ./venv (project-local)
 ```
 
 When `--python X.Y` is provided, `uvenv` runs `mise install python@X.Y` first (idempotent), then `mise exec python@X.Y -- uv venv <target>`. That way **mise is the single source of truth for Python versions** — uv never falls back to downloading its own.
@@ -146,7 +147,8 @@ When `--python X.Y` is provided, `uvenv` runs `mise install python@X.Y` first (i
 ### Activate / deactivate
 
 ```bash
-uvenv activate ml
+uvenv activate ml           # named global env in $UVENV_HOME
+uvenv activate ./venv       # local venv (anything with bin/activate)
 # ... do work ...
 uvenv deactivate
 ```
@@ -217,9 +219,10 @@ uvenv help        # help text
 | Command | What it does |
 | --- | --- |
 | `uvenv create -n <name> [--python X.Y]` | `mise install python@X.Y` → `mise exec python@X.Y -- uv venv ~/.uvenv/<name>` |
-| `uvenv activate <name>` / `uvenv deactivate` | Sources `~/.uvenv/<name>/bin/activate` (or runs `deactivate`) |
+| `uvenv create -l <path> [--python X.Y]` | Same, but the venv goes to `<path>` (e.g. `./venv`) instead of `$UVENV_HOME` |
+| `uvenv activate <name\|path>` / `uvenv deactivate` | Activate by name (in `$UVENV_HOME`) or by path (e.g. `./venv`) |
 | `uvenv list` | Three sections: global venvs, local venvs in cwd, available mise pythons |
-| `uvenv remove <name>` | `rm -rf ~/.uvenv/<name>` (refuses if active) |
+| `uvenv remove <name\|path>` | Delete a global env (by name) or a local venv (by path); refuses if active |
 | `uvenv install [-y] <pkg>...` | `uv pip install` into active env; warns + confirms when no venv is active |
 | `uvenv update <pkg>... \| --all` | `uv pip install --upgrade` in the active env |
 | `uvenv update --self` / `uvenv self-update` | Re-run the bundled installer |
@@ -231,7 +234,7 @@ uvenv help        # help text
 | `uvenv completions {bash\|zsh}` | Print a tab-completion script |
 | `uvenv which` / `uvenv version` / `uvenv help` | Storage dir / version / help text |
 
-For details on each command and common workflows, see **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**.
+For details on each command and common workflows, see **[USER_GUIDE.md](USER_GUIDE.md)**.
 
 ---
 

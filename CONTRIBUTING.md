@@ -27,8 +27,7 @@ lib/                      # one file per subcommand, lazy-sourced on demand
 completions/              # bash + zsh completion scripts
   uvenv.bash
   uvenv.zsh
-docs/
-  USER_GUIDE.md
+USER_GUIDE.md             # top-level user docs
 .github/workflows/
   ci.yml                    # shellcheck + smoke tests
   release.yml               # builds tarball, uploads release assets
@@ -67,7 +66,7 @@ source ./uvenv.sh
 2. Register the command in `uvenv.sh`'s dispatcher case statement.
 3. Add a usage line in `lib/help.sh`.
 4. Add completion entries in `completions/uvenv.bash` and `completions/uvenv.zsh`.
-5. Add a section in `docs/USER_GUIDE.md`.
+5. Add a section in `USER_GUIDE.md`.
 6. Add a smoke-test invocation in `.github/workflows/ci.yml`.
 
 Example skeleton:

@@ -41,7 +41,9 @@ _uvenv() {
                 activate|remove|rm)
                     local -a envs
                     envs=( "${(@f)$(ls -1 "$home" 2>/dev/null)}" )
-                    _describe 'env' envs
+                    _alternative \
+                        'envs:global env:(${envs})' \
+                        'path:local venv path:_directories'
                     ;;
                 tool)
                     if (( CURRENT == 2 )); then
@@ -55,13 +57,19 @@ _uvenv() {
                     _values 'shell' bash zsh
                     ;;
                 create|set)
-                    if [[ "$words[CURRENT-1]" == "--python" ]]; then
-                        local -a pys
-                        pys=( "${(@f)$(mise ls python 2>/dev/null | awk '{print $2}' | grep -E '^[0-9]')}" )
-                        _describe 'python' pys
-                    else
-                        _values 'flag' -n --python
-                    fi
+                    case "$words[CURRENT-1]" in
+                        --python)
+                            local -a pys
+                            pys=( "${(@f)$(mise ls python 2>/dev/null | awk '{print $2}' | grep -E '^[0-9]')}" )
+                            _describe 'python' pys
+                            ;;
+                        -l)
+                            _directories
+                            ;;
+                        *)
+                            _values 'flag' -n -l --python
+                            ;;
+                    esac
                     ;;
             esac
             ;;

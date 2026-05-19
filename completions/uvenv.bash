@@ -24,8 +24,9 @@ _uvenv_complete() {
         activate|remove|rm)
             local envs
             envs="$(ls -1 "$home" 2>/dev/null)"
+            # Mix global env names + path completion for local venvs
             # shellcheck disable=SC2207
-            COMPREPLY=( $(compgen -W "$envs" -- "$cur") )
+            COMPREPLY=( $(compgen -W "$envs" -- "$cur") $(compgen -d -- "$cur") )
             ;;
         create|set)
             if [ "$prev" = "--python" ]; then
@@ -33,9 +34,13 @@ _uvenv_complete() {
                 pyvers="$(mise ls python 2>/dev/null | awk '{print $2}' | grep -E '^[0-9]')"
                 # shellcheck disable=SC2207
                 COMPREPLY=( $(compgen -W "$pyvers" -- "$cur") )
+            elif [ "$prev" = "-l" ]; then
+                # Path completion for local venv location
+                # shellcheck disable=SC2207
+                COMPREPLY=( $(compgen -d -- "$cur") )
             else
                 # shellcheck disable=SC2207
-                COMPREPLY=( $(compgen -W "-n --python" -- "$cur") )
+                COMPREPLY=( $(compgen -W "-n -l --python" -- "$cur") )
             fi
             ;;
         tool)
