@@ -27,6 +27,12 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      # mise queries the GitHub API to resolve tool versions (e.g. uv).
+      # Without a token it uses the strict unauthenticated rate limit, which
+      # the macOS runner can blow through (esp. when shared with other repos).
+      # GITHUB_TOKEN is auto-provided by Actions; mise picks it up.
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
