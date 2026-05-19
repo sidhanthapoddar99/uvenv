@@ -42,7 +42,53 @@ It's a shell function. No new tools. Just glue between `mise`, `uv`, and your sh
 - **uv** installed via mise — `mise use -g uv@latest`
 - bash or zsh
 
-The installer checks for both up front; the runtime function trusts they're there.
+The installer checks for both up front; the runtime function trusts they're there. If you don't have them yet, set them up in three steps:
+
+### 1. Install mise
+
+```bash
+curl https://mise.run | sh
+```
+
+Then add mise to your shell so the `mise` command and its shims are on `PATH`:
+
+```bash
+# bash
+echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
+
+# zsh
+echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
+```
+
+Open a new shell and verify:
+
+```bash
+mise --version
+```
+
+### 2. Add uv to mise's global config
+
+```bash
+mise use -g uv@latest
+```
+
+This pins `uv` as a global tool in `~/.config/mise/config.toml`. You can confirm with:
+
+```bash
+mise ls          # shows uv and any other globally-managed tools
+uv --version     # uv is now on PATH via mise's shims
+```
+
+### 3. (Optional) Pre-install a Python via mise
+
+`uvenv create --python X.Y` runs `mise install python@X.Y` for you, so this is optional — but if you want a default Python globally:
+
+```bash
+mise use -g python@3.14
+mise install        # installs anything declared in config but not yet present
+```
+
+You're now ready to install uvenv (next section).
 
 ---
 
