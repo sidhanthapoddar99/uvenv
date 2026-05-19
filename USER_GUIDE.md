@@ -446,14 +446,15 @@ curl -fsSL https://github.com/sidhanthapoddar99/uvenv/releases/latest/download/i
 `uvenv list` to confirm the name. Envs live under `$UVENV_HOME` (default
 `~/.uvenv`); make sure you didn't move that directory.
 
-### `uvenv tool --python=X.Y install` left mise on the wrong Python
+### `uvenv tool --python=X.Y install` left a tool on the wrong Python (pre-0.2.4 only)
 
-The restore should always run, but if you killed the shell hard (e.g.
-`kill -9`) before the EXIT trap fired, run:
+Older uvenv versions used `mise use -g` + a restore trap, which had a stale-PATH
+window. Fixed in 0.2.4 by switching to `mise exec` — the python is now pinned
+both via mise's PATH and uv's `--python` flag for the duration of one command,
+with no global mise mutation. Self-update to get the fix:
 
 ```bash
-mise current python              # check current
-mise use -g python@<prev>        # restore manually
+uvenv self-update
 ```
 
 ### `uvenv install` refuses without `-y`
@@ -463,6 +464,22 @@ modifies the global site-packages. Either activate a venv first, or pass `-y`.
 
 ### Python from `uvenv create` doesn't match what mise has
 
-uvenv always runs `mise install python@X.Y` before creating the venv, so the
-exact patch version mise picks (e.g. `3.13.13` for `--python 3.13`) is what
-ends up in the venv. To pin further, pass the full version: `--python 3.13.13`.
+uvenv always runs `mise exec python@X.Y -- uv venv ...`, so the exact patch
+version mise picks (e.g. `3.13.13` for `--python=3.13`) is what ends up in the
+venv. To pin further, pass the full version: `--python=3.13.13`.
+
+### Prompt still shows a venv after `uvenv deactivate`
+
+If `which python` and `python --version` look correct (point at mise's python,
+report mise's version) but powerlevel10k / oh-my-zsh still shows the venv name,
+the prompt is reading a stale `$VIRTUAL_ENV`. v0.2.4 guarantees `$VIRTUAL_ENV`
+is unset after `uvenv deactivate` returns, so this should resolve itself —
+make sure you're on the current version (`uvenv version`).
+
+If you're on 0.2.4+ and still see it, your prompt may be caching state across
+the precmd hook. For powerlevel10k specifically, check whether instant-prompt
+mode is involved:
+
+```bash
+grep -n "instant_prompt\|POWERLEVEL9K_INSTANT_PROMPT" ~/.zshrc ~/.p10k.zsh
+```

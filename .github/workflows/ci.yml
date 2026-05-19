@@ -67,8 +67,8 @@ jobs:
 
           uvenv list
 
-          # New flags-first grammar
-          uvenv create --python=3.13 -n smoketest
+          # Flags-first grammar + -y skips the confirm prompt
+          uvenv create --python=3.13 -y -n smoketest
           uvenv list
           uvenv activate smoketest
           uvenv status
@@ -78,18 +78,45 @@ jobs:
           uvenv update --all || true
           uvenv deactivate
 
+          # Regression: deactivate must unset VIRTUAL_ENV
+          if [ -n "${VIRTUAL_ENV:-}" ]; then
+            echo "REGRESSION: VIRTUAL_ENV still set after deactivate"; exit 1
+          fi
+
+          # Regression: deactivate works even when the venv's `deactivate`
+          # function isn't defined (the original p10k-still-shows-venv bug).
+          uvenv activate smoketest
+          unset -f deactivate 2>/dev/null || true
+          uvenv deactivate
+          if [ -n "${VIRTUAL_ENV:-}" ]; then
+            echo "REGRESSION: deactivate-without-function did not clear VIRTUAL_ENV"; exit 1
+          fi
+          echo "robust deactivate OK"
+
           # exec & freeze (without activating)
           uvenv exec smoketest -- python -c "import requests; print('exec ok')"
           uvenv freeze smoketest | grep -i requests
 
-          # tool flags-first grammar — passthrough must NOT mash -U
-          out=$(uvenv tool install nonexistent-pkg-xyz -U 2>&1 || true)
+          # tool grammar — passthrough must NOT mash -U
+          out=$(uvenv tool install -y nonexistent-pkg-xyz -U 2>&1 || true)
           if echo "$out" | grep -q "Failed to parse"; then
             echo "REGRESSION: -U mashed into pkg name"; exit 1
           fi
 
+          # Regression: tool install --python=X.Y must land on X.Y, not
+          # whatever mise's current python happens to be.
+          mise use -g python@3.13
+          uvenv tool --python=3.13 -y install ruff
+          if ! grep -q '^version_info = 3.13' "$HOME/.local/share/uv/tools/ruff/pyvenv.cfg"; then
+            echo "REGRESSION: tool --python=3.13 did not land on 3.13"
+            cat "$HOME/.local/share/uv/tools/ruff/pyvenv.cfg"
+            exit 1
+          fi
+          echo "tool --python honors version OK"
+          uv tool uninstall ruff || true
+
           # local venv
-          uvenv create --python=3.13 -l ./localvenv
+          uvenv create --python=3.13 -y -l ./localvenv
           uvenv activate ./localvenv
           uvenv deactivate
           uvenv remove ./localvenv
@@ -120,14 +147,17 @@ jobs:
             uvenv version
             uvenv info      | head -5
             uvenv doctor    >/dev/null
-            uvenv create --python=3.13 -n zsmoke
+            uvenv create --python=3.13 -y -n zsmoke
             uvenv activate zsmoke
             uvenv install -y requests
             uvenv freeze zsmoke | grep -i requests
             uvenv deactivate
+            if [ -n \"\${VIRTUAL_ENV:-}\" ]; then
+              echo 'REGRESSION: zsh deactivate left VIRTUAL_ENV set'; exit 1
+            fi
 
-            # The original bug from the user: -U gets mashed into pkg name in zsh.
-            out=\$(uvenv tool install nonexistent-pkg-xyz -U 2>&1 || true)
+            # The original user bug: -U mashed into pkg name in zsh.
+            out=\$(uvenv tool install -y nonexistent-pkg-xyz -U 2>&1 || true)
             if echo \"\$out\" | grep -q 'Failed to parse'; then
               echo 'REGRESSION: -U mashed in zsh'; exit 1
             fi
