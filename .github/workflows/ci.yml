@@ -83,3 +83,28 @@ jobs:
           uvenv completions bash | head -5
           uvenv completions zsh  | head -5
           echo "OK on ${{ matrix.os }}"
+
+      - name: Install zsh
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y zsh
+
+      - name: Regression — uvenv --help under zsh
+        run: |
+          # Reproduces the zsh `declare -F` bug — must complete cleanly.
+          eval "$($HOME/.local/bin/mise activate bash)"
+          PATH_FOR_ZSH="$PATH"
+          zsh -c "
+            export PATH='$PATH_FOR_ZSH'
+            source \"\$HOME/.config/uvenv/uvenv.sh\"
+            uvenv --help    | head -3
+            uvenv version
+            uvenv info      | head -3
+            uvenv doctor    >/dev/null
+            uvenv create -n zsmoke
+            uvenv activate zsmoke
+            uvenv install requests
+            uvenv freeze zsmoke | grep -i requests
+            uvenv deactivate
+            uvenv remove zsmoke
+            echo 'zsh regression OK'
+          "

@@ -32,8 +32,11 @@ uvenv() {
         --version|-V)   cmd=version ;;
     esac
 
-    # Ensure shared helpers are loaded
-    if ! declare -F _uvenv_log >/dev/null 2>&1; then
+    # Ensure shared helpers are loaded.
+    # `typeset -f <name>` works in both bash and zsh ("does this function
+    # exist?"). NB: do NOT use `declare -F` — in zsh that means "declare
+    # a float variable" and silently creates one, returning 0.
+    if ! typeset -f _uvenv_log >/dev/null 2>&1; then
         # shellcheck disable=SC1090,SC1091
         if ! . "$UVENV_LIB/common.sh" 2>/dev/null; then
             printf 'uvenv: lib not found at %s\n' "$UVENV_LIB" >&2
@@ -69,7 +72,7 @@ uvenv() {
 
     # Function name = _uvenv_<cmd> with dashes -> underscores (self-update)
     local fn="_uvenv_${cmd//-/_}"
-    if ! declare -F "$fn" >/dev/null 2>&1; then
+    if ! typeset -f "$fn" >/dev/null 2>&1; then
         # shellcheck disable=SC1090
         if ! . "$UVENV_LIB/${libfile}.sh" 2>/dev/null; then
             _uvenv_log error "lib missing: $UVENV_LIB/${libfile}.sh"
