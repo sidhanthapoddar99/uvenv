@@ -9,7 +9,7 @@ _uvenv_complete() {
     cur="${COMP_WORDS[cword]}"
     prev="${COMP_WORDS[cword-1]}"
 
-    local cmds="create activate deactivate list ls remove rm install update self-update tool set status info which version help completions"
+    local cmds="create activate deactivate list ls remove rm install update self-update tool exec freeze set status info doctor which version help completions"
 
     if [ "$cword" -eq 1 ]; then
         # shellcheck disable=SC2207
@@ -21,7 +21,7 @@ _uvenv_complete() {
     local home="${UVENV_HOME:-$HOME/.uvenv}"
 
     case "$sub" in
-        activate|remove|rm)
+        activate|remove|rm|exec|freeze)
             local envs
             envs="$(ls -1 "$home" 2>/dev/null)"
             # Mix global env names + path completion for local venvs
@@ -46,7 +46,7 @@ _uvenv_complete() {
         tool)
             if [ "$cword" -eq 2 ]; then
                 # shellcheck disable=SC2207
-                COMPREPLY=( $(compgen -W "install uninstall list" -- "$cur") )
+                COMPREPLY=( $(compgen -W "install uninstall upgrade list" -- "$cur") )
             elif [ "$prev" = "--python" ]; then
                 local pyvers
                 pyvers="$(mise ls python 2>/dev/null | awk '{print $2}' | grep -E '^[0-9]')"

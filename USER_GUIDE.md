@@ -212,6 +212,32 @@ uvenv update numpy
 uvenv update --all
 ```
 
+### Run / inspect without activating
+
+#### `uvenv exec <name|path> -- <cmd> ...`
+
+Run a command using a uvenv env's Python and bin/ — without activating in
+this shell. The `--` is required:
+
+```bash
+uvenv exec ml -- python train.py
+uvenv exec ./venv -- pytest -q
+uvenv exec scratch -- which python
+```
+
+Useful for cron, CI, and one-shot scripts.
+
+#### `uvenv freeze [<name|path>]`
+
+`uv pip freeze` — for the active venv (no arg) or any named/path env:
+
+```bash
+uvenv freeze                # active venv
+uvenv freeze ml             # global env, no activation
+uvenv freeze ./venv         # local venv
+uvenv freeze ml > reqs.txt  # export
+```
+
 ### uv tools (`uvenv tool ...`)
 
 Wraps `uv tool install` and (importantly) lets you pin a Python version per
@@ -222,6 +248,8 @@ afterwards** even on failure or Ctrl+C.
 uvenv tool install ruff
 uvenv tool install yt-dlp --python 3.13   # uses 3.13, then restores prior
 uvenv tool list
+uvenv tool upgrade ruff
+uvenv tool upgrade --all
 uvenv tool uninstall yt-dlp
 ```
 
@@ -266,6 +294,32 @@ Active venv
 ```
 
 If no venv is active, the last section says so explicitly.
+
+#### `uvenv doctor`
+
+Sanity-check the install: mise + uv on PATH, mise has a Python, `UVENV_PREFIX`
+contains `lib/`, `UVENV_HOME` writable, and an rc file actually sources uvenv.
+
+```
+uvenv doctor — uvenv 0.2.1
+
+Dependencies
+  [PASS] mise on PATH  (/usr/local/bin/mise)
+  [PASS] uv on PATH    (/.../mise/installs/uv/.../uv)
+  [PASS] mise has a Python  (3.13.13)
+
+Paths
+  [PASS] UVENV_PREFIX install OK  (/home/you/.config/uvenv)
+  [PASS] lib/ present
+  [PASS] UVENV_HOME writable  (/home/you/.uvenv)
+
+Shell integration
+  [PASS] /home/you/.bashrc sources uvenv
+
+All checks passed.
+```
+
+Exits non-zero if any check fails — handy for scripting / install verification.
 
 #### `uvenv info`
 

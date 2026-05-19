@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report (private)
+    url: https://github.com/sidhanthapoddar99/uvenv/security/advisories/new
+    about: Please report security issues privately, not as a regular issue.
+  - name: Question or usage help
+    url: https://github.com/sidhanthapoddar99/uvenv/discussions
+    about: Open a discussion if you're stuck — issues are for bugs / feature requests.

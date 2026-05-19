@@ -24,6 +24,9 @@ _uvenv() {
         'version:Print uvenv version'
         'help:Show help'
         'completions:Print completion script'
+        'exec:Run a command in an env without activating'
+        'freeze:uv pip freeze (active env or named)'
+        'doctor:Sanity-check deps and install'
     )
 
     local context state line
@@ -38,7 +41,7 @@ _uvenv() {
         args)
             local home="${UVENV_HOME:-$HOME/.uvenv}"
             case "$words[1]" in
-                activate|remove|rm)
+                activate|remove|rm|exec|freeze)
                     local -a envs
                     envs=( "${(@f)$(ls -1 "$home" 2>/dev/null)}" )
                     _alternative \
@@ -47,7 +50,7 @@ _uvenv() {
                     ;;
                 tool)
                     if (( CURRENT == 2 )); then
-                        _values 'tool subcommand' install uninstall list
+                        _values 'tool subcommand' install uninstall upgrade list
                     fi
                     ;;
                 update)

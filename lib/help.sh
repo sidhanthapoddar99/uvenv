@@ -17,12 +17,17 @@ Usage:
   uvenv update <pkg>... | --all           Upgrade packages in active venv
   uvenv update --self  (or self-update)   Update uvenv itself
 
+  uvenv exec <name|path> -- <cmd>...      Run a command in an env without activating
+  uvenv freeze [<name|path>]              uv pip freeze (active env, or named)
+
   uvenv tool install <pkg> [--python X.Y] Install uv tool (with mise switch)
   uvenv tool uninstall <pkg>              Uninstall uv tool
+  uvenv tool upgrade <pkg> | --all        Upgrade uv tools
   uvenv tool list                         List uv tools
 
   uvenv set --python X.Y                  mise use -g python@X.Y
   uvenv status                            Show mise / uv / venv status
+  uvenv doctor                            Run dependency + install sanity checks
   uvenv info                              Cheat sheet of mise + uv commands
 
   uvenv completions {bash|zsh}            Print shell completion script

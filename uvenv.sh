@@ -58,6 +58,9 @@ uvenv() {
         tool)                libfile=tool ;;
         update|self-update)  libfile=update ;;
         completions)         libfile=completions ;;
+        exec)                libfile=exec ;;
+        freeze)              libfile=freeze ;;
+        doctor)              libfile=doctor ;;
         *)
             _uvenv_log error "unknown command '$cmd'. Try: uvenv help"
             return 1

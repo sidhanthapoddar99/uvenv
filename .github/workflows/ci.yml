@@ -18,7 +18,11 @@ jobs:
           scandir: '.'
 
   smoke-test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,8 +39,6 @@ jobs:
 
       - name: Stage uvenv as if installed
         run: |
-          # Mirror the layout install.sh produces, so uvenv.sh finds its
-          # lib/ + completions/ relative to UVENV_PREFIX.
           STAGE="$HOME/.config/uvenv"
           mkdir -p "$STAGE"
           cp -r uvenv.sh install.sh VERSION lib completions "$STAGE/"
@@ -50,8 +52,9 @@ jobs:
 
           uvenv version
           uvenv help
-          uvenv info
+          uvenv info | head -5
           uvenv status
+          uvenv doctor
 
           uvenv list
 
@@ -61,10 +64,22 @@ jobs:
           uvenv status
           uvenv install requests
           python -c "import requests; print(requests.__version__)"
+          uvenv freeze smoketest | head -5
           uvenv update --all || true
           uvenv deactivate
+
+          # exec & freeze (without activating)
+          uvenv exec smoketest -- python -c "import requests; print('exec ok')"
+          uvenv freeze smoketest | grep -i requests
+
+          # local venv
+          uvenv create -l ./localvenv
+          uvenv activate ./localvenv
+          uvenv deactivate
+          uvenv remove ./localvenv
+
           uvenv remove smoketest
 
           uvenv completions bash | head -5
           uvenv completions zsh  | head -5
-          echo "OK"
+          echo "OK on ${{ matrix.os }}"

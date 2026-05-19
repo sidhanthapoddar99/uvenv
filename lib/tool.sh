@@ -10,12 +10,14 @@ _uvenv_tool() {
     case "$sub" in
         install)   _uvenv__tool_install   "$@" ;;
         uninstall) _uvenv__tool_uninstall "$@" ;;
+        upgrade)   _uvenv__tool_upgrade   "$@" ;;
         list)      uv tool list ;;
         ""|-h|--help)
             cat <<EOF
 Usage:
   uvenv tool install <pkg> [--python X.Y]   Install a uv tool (optionally pin Python)
   uvenv tool uninstall <pkg>                Uninstall a uv tool
+  uvenv tool upgrade [<pkg>] | --all        Upgrade a tool (or all tools)
   uvenv tool list                           List installed uv tools
 EOF
             ;;
@@ -78,4 +80,26 @@ _uvenv__tool_uninstall() {
         return 1
     fi
     uv tool uninstall "$pkg"
+}
+
+_uvenv__tool_upgrade() {
+    # uvenv tool upgrade --all   |   uvenv tool upgrade <pkg>
+    local all=0
+    local args=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --all) all=1; shift ;;
+            *) args+=("$1"); shift ;;
+        esac
+    done
+
+    if [ "$all" -eq 1 ]; then
+        uv tool upgrade --all
+        return $?
+    fi
+    if [ ${#args[@]} -eq 0 ]; then
+        _uvenv_log error "usage: uvenv tool upgrade <pkg> | --all"
+        return 1
+    fi
+    uv tool upgrade "${args[@]}"
 }
