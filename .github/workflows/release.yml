@@ -36,16 +36,16 @@ jobs:
 
       - name: Sanity-check repo
         run: |
-          test -f uvenv.sh
+          test -f src/uvenv.sh
           test -f install.sh
-          test -f VERSION
-          test -d lib
-          test -d completions
-          grep -q '^uvenv() {' uvenv.sh
+          test -f src/VERSION
+          test -d src/lib
+          test -d src/completions
+          grep -q '^uvenv() {' src/uvenv.sh
 
           TAG="${{ steps.tag.outputs.name }}"
           BARE="${TAG#v}"
-          VFILE="$(tr -d '[:space:]' < VERSION)"
+          VFILE="$(tr -d '[:space:]' < src/VERSION)"
           if [ "$VFILE" != "$BARE" ]; then
             echo "::warning::VERSION file ($VFILE) does not match tag ($BARE)"
           fi
@@ -62,7 +62,10 @@ jobs:
           TAG="${{ steps.tag.outputs.name }}"
           STAGE="uvenv-${TAG}"
           mkdir -p "$STAGE"
-          cp -r uvenv.sh install.sh VERSION LICENSE USER_GUIDE.md CHANGELOG.md lib completions "$STAGE/"
+          # Flatten src/ into the tarball root so the installer's atomic
+          # swap keeps the installed layout flat at $UVENV_PREFIX/.
+          cp -r src/uvenv.sh src/VERSION src/lib src/completions "$STAGE/"
+          cp -r install.sh LICENSE USER_GUIDE.md CHANGELOG.md "$STAGE/"
           tar -czf "uvenv-${TAG}.tar.gz" "$STAGE"
           ls -lh "uvenv-${TAG}.tar.gz"
           tar -tzf "uvenv-${TAG}.tar.gz" | head -20

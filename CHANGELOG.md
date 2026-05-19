@@ -5,6 +5,39 @@ All notable changes to uvenv are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-19
+
+### Changed
+
+- **Repository layout reorganised.** Shell source code moves under `src/`:
+  - `uvenv.sh` → `src/uvenv.sh`
+  - `VERSION` → `src/VERSION`
+  - `lib/` → `src/lib/`
+  - `completions/` → `src/completions/`
+- Everything else stays at the repo root (`install.sh`, `README.md`,
+  `LICENSE`, `CHANGELOG.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `DESIGN.md`,
+  `SECURITY.md`, `USER_GUIDE.md`, `demo/`, `.github/`). The result is a
+  cleaner root that separates docs/metadata from shell source.
+- The release tarball flattens `src/` into the tarball root, so the
+  **installed layout at `$UVENV_PREFIX` is unchanged** — `uvenv.sh`,
+  `VERSION`, `lib/`, and `completions/` still sit directly under it.
+  Existing installs and `uvenv self-update` work without any user action.
+- `release.yml` and `ci.yml` updated to read from `src/`.
+- `CONTRIBUTING.md` local-dev instructions updated:
+  `UVENV_PREFIX="$PWD/src" source ./src/uvenv.sh` (was `UVENV_PREFIX="$PWD"`).
+
+### Migration
+
+No user-facing migration. The installer ships the same flat layout as before;
+`uvenv self-update` from 0.2.6 → 0.3.0 is transparent.
+
+For contributors with a local clone:
+```bash
+git pull
+# Local-dev source path changed:
+UVENV_PREFIX="$PWD/src" source ./src/uvenv.sh
+```
+
 ## [0.2.6] - 2026-05-19
 
 ### Fixed
@@ -192,6 +225,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and adds a `source` line to the user's rc file.
 - CI with shellcheck + a basic smoke test.
 
+[0.3.0]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.3.0
 [0.2.6]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.2.6
 [0.2.5]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.2.5
 [0.2.4]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.2.4

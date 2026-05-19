@@ -51,7 +51,10 @@ jobs:
         run: |
           STAGE="$HOME/.config/uvenv"
           mkdir -p "$STAGE"
-          cp -r uvenv.sh install.sh VERSION lib completions "$STAGE/"
+          # Mirror what the release tarball produces: flat layout at $STAGE
+          # built from src/ + install.sh (which lives at repo root).
+          cp -r src/uvenv.sh src/VERSION src/lib src/completions "$STAGE/"
+          cp install.sh "$STAGE/"
           ls -la "$STAGE"
 
           # Simulate what install.sh writes — needed so `uvenv doctor` can

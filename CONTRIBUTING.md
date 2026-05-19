@@ -9,7 +9,7 @@ welcome.
 1. **Stay shell.** `uvenv activate` mutates the calling shell, which a binary
    can't do. We stay bash/zsh-compatible, sourced from rc files.
 2. **Stay small.** The dispatcher is ~60 lines; each subcommand lives in its
-   own `lib/<cmd>.sh` file and should typically be under 100 lines. If a
+   own `src/lib/<cmd>.sh` file and should typically be under 100 lines. If a
    feature needs more, propose splitting it first.
 3. **Don't reinvent.** mise picks Pythons. uv creates venvs and installs
    packages. uvenv only orchestrates. If you find yourself reimplementing
@@ -18,20 +18,30 @@ welcome.
 ## Repository layout
 
 ```
-uvenv.sh                  # dispatcher (sourced into user shells)
-install.sh                # installer (bundled in tarball; reused by self-update)
-VERSION                   # single source of truth for the version string
-lib/                      # one file per subcommand, lazy-sourced on demand
-  common.sh                 #   shared helpers (logging, confirm, pyvenv.cfg)
-  create.sh / activate.sh / list.sh / ...
-completions/              # bash + zsh completion scripts
-  uvenv.bash
-  uvenv.zsh
-USER_GUIDE.md             # top-level user docs
+src/                      # all shell source — flattened by the installer
+  uvenv.sh                  # dispatcher (sourced into user shells)
+  VERSION                   # single source of truth for the version string
+  lib/                      # one file per subcommand, lazy-sourced
+    common.sh                 #   shared helpers (logging, confirm, colours)
+    create.sh / activate.sh / list.sh / ...
+  completions/              # bash + zsh completion scripts
+    uvenv.bash
+    uvenv.zsh
+install.sh                # installer; bundled in tarball; reused by self-update
+                          # MUST stay at repo root (the release URL points at it)
+README.md, LICENSE        # required at root for GitHub
+CHANGELOG.md              # Keep a Changelog, root by convention
+CLAUDE.md, USER_GUIDE.md, DESIGN.md, SECURITY.md
 .github/workflows/
-  ci.yml                    # shellcheck + smoke tests
-  release.yml               # builds tarball, uploads release assets
+  ci.yml                    # shellcheck + smoke (linux + macos + zsh)
+  release.yml               # builds tarball, uploads release assets, extracts
+                            # the matching CHANGELOG.md section as release notes
+demo/                     # VHS tape files
 ```
+
+The release tarball flattens `src/` into the tarball root, so the installed
+layout at `$UVENV_PREFIX` (default `~/.config/uvenv`) is flat — `uvenv.sh`,
+`VERSION`, `lib/`, `completions/` sit directly under it. Users see no `src/`.
 
 ## Local dev setup
 
@@ -40,39 +50,44 @@ git clone https://github.com/sidhanthapoddar99/uvenv.git
 cd uvenv
 ```
 
-Run uvenv from the checkout without installing:
+Run uvenv from the checkout without installing — point `UVENV_PREFIX` at `src/`:
 
 ```bash
-UVENV_PREFIX="$PWD" source ./uvenv.sh
+UVENV_PREFIX="$PWD/src" source ./src/uvenv.sh
 uvenv version       # should print "uvenv 0.X.Y"
 ```
 
-Setting `UVENV_PREFIX` to the repo root lets the dispatcher find `lib/` and
-`completions/` in place.
+Or work from inside `src/`:
+
+```bash
+cd src
+UVENV_PREFIX="$PWD" source ./uvenv.sh
+```
 
 Re-run after every edit:
 
 ```bash
 unset -f uvenv      # forget the cached function
 # also forget any cached subcommand functions so they re-source
-for f in $(declare -F | awk '/_uvenv_/ {print $3}'); do unset -f "$f"; done
-source ./uvenv.sh
+for f in $(typeset -f | awk '/_uvenv_/ {print $1}' | grep '^_uvenv'); do unset -f "$f"; done
+source ./src/uvenv.sh
 ```
 
 ## Adding a new subcommand
 
-1. Create `lib/<cmd>.sh` with a function `_uvenv_<cmd>` (and any internal
-   helpers prefixed `_uvenv__`).
-2. Register the command in `uvenv.sh`'s dispatcher case statement.
-3. Add a usage line in `lib/help.sh`.
-4. Add completion entries in `completions/uvenv.bash` and `completions/uvenv.zsh`.
+1. Create `src/lib/<cmd>.sh` with a function `_uvenv_<cmd>` (and any
+   internal helpers prefixed `_uvenv__`).
+2. Register the command in `src/uvenv.sh`'s dispatcher case statement.
+3. Add a usage line in `src/lib/help.sh`.
+4. Add completion entries in `src/completions/uvenv.bash` and
+   `src/completions/uvenv.zsh`.
 5. Add a section in `USER_GUIDE.md`.
 6. Add a smoke-test invocation in `.github/workflows/ci.yml`.
 
 Example skeleton:
 
 ```bash
-# lib/example.sh
+# src/lib/example.sh
 
 _uvenv_example() {
     local arg="${1:-}"
@@ -92,7 +107,7 @@ example) libfile=example ;;
 
 ## Style
 
-- POSIX-ish bash; no zsh-only constructs in `lib/*.sh` (completions can be
+- POSIX-ish bash; no zsh-only constructs in `src/lib/*.sh` (completions can be
   shell-specific).
 - Use `_uvenv_log error|warn|info` for user-facing output. Avoid raw `echo`.
 - Use `_uvenv__confirm` for yes/no prompts.
@@ -106,7 +121,7 @@ example) libfile=example ;;
 Local:
 
 ```bash
-shellcheck uvenv.sh install.sh lib/*.sh
+shellcheck src/uvenv.sh src/lib/*.sh install.sh
 ```
 
 CI runs shellcheck and a smoke test that exercises create / activate / install

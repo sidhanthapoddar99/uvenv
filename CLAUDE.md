@@ -14,21 +14,29 @@ plus per-subcommand `lib/*.sh` files.
 ## Layout
 
 ```
-uvenv.sh                  thin dispatcher, sourced from .bashrc / .zshrc
+src/                      shell source — flattened into $UVENV_PREFIX at install
+  uvenv.sh                  thin dispatcher, sourced from .bashrc / .zshrc
+  VERSION                   single source of truth for the version string
+  lib/                      one file per subcommand, lazy-sourced on demand
+    common.sh                 shared helpers: log, confirm, colours, helpers
+    create.sh / activate.sh / list.sh / ...
+  completions/              bash + zsh completion scripts, auto-loaded by uvenv.sh
 install.sh                tarball-based installer; bundled in releases so
-                          `uvenv self-update` reuses it
-VERSION                   single source of truth for the version string
-lib/                      one file per subcommand, lazy-sourced on demand
-  common.sh                 shared helpers: log, confirm, colours, helpers
-  create.sh / activate.sh / list.sh / ...
-completions/              bash + zsh completion scripts, auto-loaded by uvenv.sh
+                          `uvenv self-update` reuses it. MUST stay at repo root
+                          — the release URL points at it.
+README.md, LICENSE        required at root for GitHub
 CHANGELOG.md              Keep-a-Changelog formatted; UPDATE THIS ON EVERY BUMP
 USER_GUIDE.md             user-facing reference
 CONTRIBUTING.md           dev workflow, how to add a subcommand
 DESIGN.md                 why uvenv is shaped the way it is
 SECURITY.md               disclosure policy
 .github/workflows/        ci.yml (shellcheck + smoke on linux+mac+zsh), release.yml
+demo/                     VHS tape files (regenerate GIFs locally)
 ```
+
+The installed layout at `$UVENV_PREFIX` is **flat** — `uvenv.sh`, `VERSION`,
+`lib/`, `completions/` all live directly under it. `src/` is a repo-only
+organisational thing; the release tarball flattens it.
 
 ## Cross-cutting invariants
 
@@ -111,14 +119,17 @@ on the fallback.
 ## Testing locally
 
 ```bash
-# Run uvenv without installing — points lib/ + completions/ at the repo:
-UVENV_PREFIX="$PWD" source ./uvenv.sh
+# Run uvenv directly from src/ without installing:
+UVENV_PREFIX="$PWD/src" source ./src/uvenv.sh
 uvenv version
+
+# Or run from inside src/:
+cd src && UVENV_PREFIX="$PWD" source ./uvenv.sh
 
 # Reload after edits:
 for f in $(typeset -F | awk '/_uvenv_/ {print $3}'); do unset -f "$f"; done
 unset -f uvenv
-source ./uvenv.sh
+source ./src/uvenv.sh
 ```
 
 CI runs `shellcheck`, plus a smoke test on `ubuntu-latest` and `macos-latest`
