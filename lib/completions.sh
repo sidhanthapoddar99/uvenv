@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv completions {bash|zsh}  — print the relevant completion script.
 # Pipe it through eval, or save to a file your shell sources.
 

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv which   — print storage dir
 
 _uvenv_which() {

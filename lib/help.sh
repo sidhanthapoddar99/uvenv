@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv help    — usage text
 # uvenv version — print version
 

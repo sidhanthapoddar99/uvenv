@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv activate <name|path>   — activates a named global env OR a local path
 # uvenv deactivate
 #

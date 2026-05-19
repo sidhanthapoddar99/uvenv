@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv update [pkg ...] | --all | --self
 # uvenv self-update                  (alias for --self)
 #

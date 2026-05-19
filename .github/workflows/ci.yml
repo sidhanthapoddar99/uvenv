@@ -48,6 +48,11 @@ jobs:
           cp -r uvenv.sh install.sh VERSION lib completions "$STAGE/"
           ls -la "$STAGE"
 
+          # Simulate what install.sh writes — needed so `uvenv doctor` can
+          # verify the rc-integration check.
+          touch "$HOME/.bashrc"
+          echo "source $STAGE/uvenv.sh" >> "$HOME/.bashrc"
+
       - name: Smoke test the modular layout
         run: |
           eval "$($HOME/.local/bin/mise activate bash)"

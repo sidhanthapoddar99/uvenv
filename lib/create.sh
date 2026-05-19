@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv create [--python=X.Y] (-n <name> | -l <path>)
 #
 # Grammar: all flags are uvenv's. There is no passthrough section because

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv status — show mise, uv, and active venv state (coloured headers).
 
 _uvenv_status() {

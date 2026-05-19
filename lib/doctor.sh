@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv doctor — coloured PASS/FAIL sanity check.
 
 _uvenv_doctor() {

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv list — three sections:
 #   1. Global venvs (under $UVENV_HOME)
 #   2. Local venvs (./.venv or ./venv in cwd)

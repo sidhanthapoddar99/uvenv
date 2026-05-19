@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv set --python=X.Y   — wraps `mise use -g python@X.Y`
 #
 # `mise use -g` already auto-installs the version on demand, so no explicit

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv install [-y] [--] <pkg ...>
 #
 # Grammar: uvenv flags first, then optional `--`, then everything passes

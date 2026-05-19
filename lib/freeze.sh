@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv freeze [<name|path>]
 #
 # With no arg, freeze the currently-active venv.

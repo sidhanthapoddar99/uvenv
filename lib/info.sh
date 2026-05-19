@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv info — detailed translation map: what each uvenv command runs
 # underneath, what guarantees / safety rails it adds, and how the four
 # kinds of env (base / uv tool / global / local) relate.

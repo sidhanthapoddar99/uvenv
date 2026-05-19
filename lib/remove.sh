@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv remove <name|path>
 #
 # Resolves the same way as activate: tries $UVENV_HOME/<arg> first, then <arg>

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv shared helpers — sourced once by the dispatcher on first call.
 # Functions: _uvenv_log, _uvenv__confirm, _uvenv__venv_python,
 #            _uvenv__venv_base, _uvenv__active_venv_name,

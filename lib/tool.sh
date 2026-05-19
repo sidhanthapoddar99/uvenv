@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv tool [--python=X.Y] <action> [args ...]
 #
 # Grammar (the "infographic"):

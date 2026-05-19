@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # uvenv exec <name|path> -- <cmd> [args ...]
 #
 # Run a command using a uvenv env's python/bin without activating in this
