@@ -81,3 +81,36 @@ uvenv() {
     fi
     "$fn" "$@"
 }
+
+# ───── auto-enable tab completion ─────
+# Sourced from the user's rc, so the user gets completion for free as soon
+# as they install uvenv — no extra `eval "$(uvenv completions ...)"` step.
+if [ -d "$UVENV_PREFIX/completions" ]; then
+    if [ -n "${BASH_VERSION:-}" ] && [ -f "$UVENV_PREFIX/completions/uvenv.bash" ]; then
+        # shellcheck disable=SC1090,SC1091
+        . "$UVENV_PREFIX/completions/uvenv.bash" 2>/dev/null
+    elif [ -n "${ZSH_VERSION:-}" ] && [ -f "$UVENV_PREFIX/completions/uvenv.zsh" ]; then
+        # zsh needs compinit to be loaded before `compdef` works. If it's
+        # available now, register immediately; otherwise defer until the
+        # first prompt fires so compinit (almost always in user's rc) has
+        # had a chance to run.
+        if command -v compdef >/dev/null 2>&1; then
+            # shellcheck disable=SC1090,SC1091
+            . "$UVENV_PREFIX/completions/uvenv.zsh" 2>/dev/null
+        else
+            _uvenv_init_completion() {
+                if command -v compdef >/dev/null 2>&1; then
+                    # shellcheck disable=SC1090,SC1091
+                    . "$UVENV_PREFIX/completions/uvenv.zsh" 2>/dev/null
+                fi
+                # Self-remove so it only runs once.
+                if typeset -f add-zsh-hook >/dev/null 2>&1; then
+                    add-zsh-hook -d precmd _uvenv_init_completion 2>/dev/null
+                fi
+            }
+            if autoload -Uz add-zsh-hook 2>/dev/null; then
+                add-zsh-hook precmd _uvenv_init_completion 2>/dev/null
+            fi
+        fi
+    fi
+fi

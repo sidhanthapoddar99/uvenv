@@ -6,12 +6,24 @@ Conda-style `activate ml` ergonomics, without conda. uvenv is a small shell
 wrapper around `mise` (Python versions) and `uv` (venvs + packages).
 
 ```bash
-uvenv create -n ml --python 3.13
+uvenv create --python=3.13 -n ml
 uvenv activate ml
 uvenv install numpy pandas
 uvenv list                         # global envs + local venvs + mise pythons
 uvenv deactivate
 ```
+
+### Grammar
+
+```text
+uvenv tool --python=3.13 install dstack -U
+        └─ uvenv's flags ─┘ └─ verbatim to uv ─┘
+```
+
+uvenv's own flags come **before** the action verb. Everything from the
+action onward is passed straight to `uv` (or `mise`) without parsing —
+so any flag uv accepts works as expected. Use `--` after uvenv's flags
+when you need an explicit separator (e.g. `uvenv install -- numpy --pre`).
 
 📖 **[USER_GUIDE.md](USER_GUIDE.md)** — full command reference & workflows
 🛠 **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to extend it
@@ -101,37 +113,33 @@ UVENV_REF=main curl -fsSL \
 ## Quick tour
 
 ```bash
-uvenv create -n ml --python 3.13            # ~/.uvenv/ml using mise's python 3.13
-uvenv create -l ./venv --python 3.12        # local venv at ./venv
+uvenv create --python=3.13 -n ml            # ~/.uvenv/ml using mise's python 3.13
+uvenv create --python=3.12 -l ./venv        # local venv at ./venv
 
 uvenv activate ml                            # by name
 uvenv activate ./venv                        # by path
-uvenv install numpy pandas
+uvenv install numpy pandas                   # uvenv-flags first, pkgs go to uv
+uvenv install -y -- numpy --pre              # -- separates uvenv flags from uv args
 uvenv update --all
 uvenv deactivate
 
 uvenv exec ml -- python train.py             # run in env without activating
 uvenv freeze ml > requirements.txt
 
-uvenv tool install ruff --python 3.13        # remembers, switches, restores
+uvenv tool --python=3.13 install ruff -U     # remembers, switches, restores
 uvenv tool upgrade --all
 
-uvenv set --python 3.14                      # mise use -g python@3.14
+uvenv set --python=3.14                      # mise use -g python@3.14
 uvenv status                                 # mise / uv / venv state
-uvenv list                                   # all three sections
+uvenv list                                   # all three sections; active marked with *
 
+uvenv doctor                                 # PASS/FAIL on deps, paths, completions
 uvenv self-update                            # re-run the bundled installer
 ```
 
-Enable tab completion:
-
-```bash
-# bash
-eval "$(uvenv completions bash)"     >> ~/.bashrc
-
-# zsh
-eval "$(uvenv completions zsh)"      >> ~/.zshrc
-```
+Tab completion is enabled **automatically** when `uvenv.sh` is sourced from your
+rc file — no extra setup needed. (If `uvenv doctor` reports it as missing under
+zsh, ensure `autoload -Uz compinit && compinit` runs *before* the uvenv source line.)
 
 ---
 

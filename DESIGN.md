@@ -3,6 +3,35 @@
 Why uvenv is the shape it is. If you're just using uvenv, the [user guide](USER_GUIDE.md)
 is what you want.
 
+## Flags-first grammar
+
+```text
+uvenv tool --python=3.13 install dstack -U
+        └─ uvenv's flags ─┘ └─ verbatim to uv ─┘
+```
+
+uvenv adopts the **git / docker / kubectl convention**: tool-specific flags
+come first, then an action verb, then everything else is passed through
+verbatim. Parsing becomes a one-line rule: scan flags until you hit the first
+non-flag word, dispatch on it, hand `"$@"` to the underlying tool.
+
+Two real bugs went away once this was adopted:
+
+1. **zsh's lack of word-splitting on unquoted scalars.** The old `tool.sh`
+   accumulated `<pkg> <flags>` into a single space-joined string and relied on
+   word-splitting at the call site. bash splits, zsh doesn't — so `uvenv tool
+   install dstack -U` worked in bash and exploded in zsh with `Failed to parse:
+   \`dstack -U\``. Verbatim `"$@"` passthrough has no such fragility.
+2. **Flag-soup parsers in every subcommand.** Each wrapper had to know which
+   uv flags exist so it could distinguish "uvenv's `--python`" from "uv's
+   `--something`". With flags-first, uvenv only parses its own flags, and uv
+   gets a clean argv it can handle however it wants — including future flags
+   we don't know about yet.
+
+The `--` GNU end-of-flags marker is supported as an explicit disambiguator:
+`uvenv install -- numpy --pre` makes it visually obvious that `--pre` goes to
+uv even though it superficially looks like a uvenv flag.
+
 ## Why a shell function, not a binary?
 
 `uvenv activate` must mutate the **current** shell's `PATH` and `$VIRTUAL_ENV`.

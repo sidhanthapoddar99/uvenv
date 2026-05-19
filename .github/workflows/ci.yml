@@ -58,11 +58,12 @@ jobs:
 
           uvenv list
 
-          uvenv create -n smoketest
+          # New flags-first grammar
+          uvenv create --python=3.13 -n smoketest
           uvenv list
           uvenv activate smoketest
           uvenv status
-          uvenv install requests
+          uvenv install -y requests
           python -c "import requests; print(requests.__version__)"
           uvenv freeze smoketest | head -5
           uvenv update --all || true
@@ -72,8 +73,14 @@ jobs:
           uvenv exec smoketest -- python -c "import requests; print('exec ok')"
           uvenv freeze smoketest | grep -i requests
 
+          # tool flags-first grammar — passthrough must NOT mash -U
+          out=$(uvenv tool install nonexistent-pkg-xyz -U 2>&1 || true)
+          if echo "$out" | grep -q "Failed to parse"; then
+            echo "REGRESSION: -U mashed into pkg name"; exit 1
+          fi
+
           # local venv
-          uvenv create -l ./localvenv
+          uvenv create --python=3.13 -l ./localvenv
           uvenv activate ./localvenv
           uvenv deactivate
           uvenv remove ./localvenv
@@ -88,9 +95,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get install -y zsh
 
-      - name: Regression — uvenv --help under zsh
+      - name: Regression — full lifecycle + flag passthrough under zsh
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          # Reproduces the zsh `declare -F` bug — must complete cleanly.
+          # Guards two zsh-specific bugs we've hit:
+          #   1. `declare -F` (means "float var" in zsh) breaking lazy-load
+          #   2. unquoted $pkg word-splitting (zsh doesn't, bash does) — fixed
+          #      by the flags-first grammar with verbatim "$@" passthrough.
           eval "$($HOME/.local/bin/mise activate bash)"
           PATH_FOR_ZSH="$PATH"
           zsh -c "
@@ -98,13 +109,21 @@ jobs:
             source \"\$HOME/.config/uvenv/uvenv.sh\"
             uvenv --help    | head -3
             uvenv version
-            uvenv info      | head -3
+            uvenv info      | head -5
             uvenv doctor    >/dev/null
-            uvenv create -n zsmoke
+            uvenv create --python=3.13 -n zsmoke
             uvenv activate zsmoke
-            uvenv install requests
+            uvenv install -y requests
             uvenv freeze zsmoke | grep -i requests
             uvenv deactivate
+
+            # The original bug from the user: -U gets mashed into pkg name in zsh.
+            out=\$(uvenv tool install nonexistent-pkg-xyz -U 2>&1 || true)
+            if echo \"\$out\" | grep -q 'Failed to parse'; then
+              echo 'REGRESSION: -U mashed in zsh'; exit 1
+            fi
+            echo 'zsh -U passthrough OK'
+
             uvenv remove zsmoke
             echo 'zsh regression OK'
           "

@@ -3,20 +3,71 @@
 #            _uvenv__venv_base, _uvenv__active_venv_name,
 #            _uvenv__mise_current_python.
 
+# ───── color setup ─────
+# Honour the NO_COLOR (https://no-color.org) and FORCE_COLOR conventions, then
+# fall back to a tty check on stderr. Set once at load time. _UVENV_C_* are
+# empty strings when colors are off, so callers can interpolate them
+# unconditionally without sprinkling conditionals.
+if [ -n "${NO_COLOR:-}" ]; then
+    _uvenv__use_color=0
+elif [ -n "${FORCE_COLOR:-}" ]; then
+    _uvenv__use_color=1
+elif [ -t 2 ]; then
+    _uvenv__use_color=1
+else
+    _uvenv__use_color=0
+fi
+
+if [ "$_uvenv__use_color" -eq 1 ]; then
+    _UVENV_C_RED=$'\033[31m'
+    _UVENV_C_GREEN=$'\033[32m'
+    _UVENV_C_YELLOW=$'\033[33m'
+    _UVENV_C_CYAN=$'\033[36m'
+    _UVENV_C_BOLD=$'\033[1m'
+    _UVENV_C_DIM=$'\033[2m'
+    _UVENV_C_RESET=$'\033[0m'
+else
+    _UVENV_C_RED=''
+    _UVENV_C_GREEN=''
+    _UVENV_C_YELLOW=''
+    _UVENV_C_CYAN=''
+    _UVENV_C_BOLD=''
+    _UVENV_C_DIM=''
+    _UVENV_C_RESET=''
+fi
+
 _uvenv_log() {
     local level="$1"; shift
     case "$level" in
-        error|warn) printf 'uvenv: %s\n' "$*" >&2 ;;
-        info)       printf 'uvenv: %s\n' "$*" ;;
-        plain)      printf '%s\n' "$*" ;;
-        *)          printf 'uvenv: %s\n' "$level $*" ;;
+        error)
+            printf '%suvenv: error:%s %s\n' \
+                "${_UVENV_C_BOLD}${_UVENV_C_RED}" "${_UVENV_C_RESET}" "$*" >&2
+            ;;
+        warn)
+            printf '%suvenv: warn:%s %s\n' \
+                "${_UVENV_C_BOLD}${_UVENV_C_YELLOW}" "${_UVENV_C_RESET}" "$*" >&2
+            ;;
+        success)
+            printf '%suvenv:%s %s\n' \
+                "${_UVENV_C_BOLD}${_UVENV_C_GREEN}" "${_UVENV_C_RESET}" "$*"
+            ;;
+        info)
+            printf '%suvenv:%s %s\n' \
+                "${_UVENV_C_DIM}" "${_UVENV_C_RESET}" "$*"
+            ;;
+        plain)
+            printf '%s\n' "$*"
+            ;;
+        *)
+            printf 'uvenv: %s %s\n' "$level" "$*"
+            ;;
     esac
 }
 
 _uvenv__confirm() {
     # _uvenv__confirm "prompt text"  -> 0 = yes, 1 = no
     local ans
-    printf '%s [y/N] ' "$1" >&2
+    printf '%s%s [y/N]%s ' "${_UVENV_C_BOLD}" "$1" "${_UVENV_C_RESET}" >&2
     if ! read -r ans; then
         printf '\n' >&2
         return 1
@@ -54,8 +105,13 @@ _uvenv__active_venv_name() {
 
 _uvenv__mise_current_python() {
     # Best-effort: returns the python version mise currently resolves to.
-    # May reflect a directory-local override rather than the strict global —
-    # documented in the user guide.
     command -v mise >/dev/null 2>&1 || return 1
     mise current python 2>/dev/null
+}
+
+_uvenv__abspath() {
+    # Echo the resolved absolute path of a directory, or empty.
+    [ -z "${1:-}" ] && return 1
+    [ -d "$1" ] || return 1
+    (cd "$1" 2>/dev/null && pwd)
 }

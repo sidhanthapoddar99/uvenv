@@ -8,15 +8,35 @@ commands shown alongside so you always know what's happening beneath the wrapper
 
 ## Contents
 
-1. [Mental model](#mental-model)
-2. [Install](#install)
-3. [Layout on disk](#layout-on-disk)
-4. [Concepts: base Python vs. venv](#concepts-base-python-vs-venv)
-5. [Command reference](#command-reference)
-6. [Common workflows](#common-workflows)
-7. [Tab completion](#tab-completion)
-8. [Updating uvenv](#updating-uvenv)
-9. [Troubleshooting](#troubleshooting)
+1. [Grammar](#grammar)
+2. [Mental model](#mental-model)
+3. [Install](#install)
+4. [Layout on disk](#layout-on-disk)
+5. [Concepts: base Python vs. venv](#concepts-base-python-vs-venv)
+6. [Command reference](#command-reference)
+7. [Common workflows](#common-workflows)
+8. [Tab completion](#tab-completion)
+9. [Updating uvenv](#updating-uvenv)
+10. [Troubleshooting](#troubleshooting)
+
+## Grammar
+
+```text
+uvenv tool --python=3.13 install dstack -U
+        └─ uvenv's flags ─┘ └─ verbatim to uv ─┘
+```
+
+The grammar is consistent across every subcommand:
+
+- **uvenv flags come first**, before the action verb. `--python=X.Y`, `-n`,
+  `-l`, `-y` etc. are uvenv's; uvenv parses them.
+- **The action verb** (`install`, `uninstall`, `upgrade`, `list` for `tool`;
+  not applicable for one-shot commands like `set`) determines what uvenv
+  dispatches to.
+- **Everything after the action is forwarded verbatim** to `uv` (or `mise`).
+  No re-parsing, no surprises — any uv flag works as expected.
+- **Use `--` to be explicit** when there's ambiguity (e.g.
+  `uvenv install -- numpy --pre` to be 100% sure `--pre` goes to uv).
 
 ---
 
@@ -119,10 +139,10 @@ independent, so reinstalling / updating uvenv never touches your envs.
 
 ### Environments
 
-#### `uvenv create -n <name> [--python X.Y]`
+#### `uvenv create [--python=X.Y] -n <name>`
 
 ```bash
-uvenv create -n ml --python 3.13
+uvenv create --python=3.13 -n ml
 ```
 
 Equivalent to:
@@ -134,13 +154,13 @@ mise exec python@3.13 -- uv venv ~/.uvenv/ml
 
 If `--python` is omitted, uvenv uses whatever Python mise currently resolves.
 
-#### `uvenv create -l <path> [--python X.Y]`
+#### `uvenv create [--python=X.Y] -l <path>`
 
 Create a venv at a local path (project-local, not global). Mise still picks
 the Python:
 
 ```bash
-uvenv create -l ./venv --python 3.13
+uvenv create --python=3.13 -l ./venv
 uvenv create -l /tmp/scratch
 ```
 
@@ -246,7 +266,7 @@ afterwards** even on failure or Ctrl+C.
 
 ```bash
 uvenv tool install ruff
-uvenv tool install yt-dlp --python 3.13   # uses 3.13, then restores prior
+uvenv tool --python=3.13 install yt-dlp   # uses 3.13, then restores prior
 uvenv tool list
 uvenv tool upgrade ruff
 uvenv tool upgrade --all
@@ -264,10 +284,10 @@ mise use -g python@$prev      # always runs, even on failure (EXIT trap)
 
 ### Python version (`mise`) shortcuts
 
-#### `uvenv set --python X.Y`
+#### `uvenv set --python=X.Y`
 
 ```bash
-uvenv set --python 3.14    # ≡ mise install python@3.14 + mise use -g python@3.14
+uvenv set --python=3.14    # ≡ mise install python@3.14 + mise use -g python@3.14
 ```
 
 ### Status & info
@@ -354,8 +374,8 @@ eval "$(uvenv completions zsh)"
 ### Try out a new Python release
 
 ```bash
-uvenv set --python 3.14            # mise grabs 3.14, makes it global default
-uvenv create -n play314 --python 3.14
+uvenv set --python=3.14            # mise grabs 3.14, makes it global default
+uvenv create --python=3.14 -n play314
 uvenv activate play314
 uvenv install ipython
 ```
@@ -363,8 +383,8 @@ uvenv install ipython
 ### Multiple project envs, switch on demand
 
 ```bash
-uvenv create -n api --python 3.12
-uvenv create -n notebook --python 3.13
+uvenv create --python=3.12 -n api
+uvenv create --python=3.13 -n notebook
 uvenv activate api
 # work on api...
 uvenv deactivate
@@ -374,7 +394,7 @@ uvenv activate notebook
 ### Install a CLI tool against a non-default Python
 
 ```bash
-uvenv tool install scrapy --python 3.12   # scrapy needs 3.12 today
+uvenv tool --python=3.12 install scrapy   # scrapy needs 3.12 today
 # mise's global python stays whatever it was before
 ```
 
@@ -393,7 +413,7 @@ Once enabled (see `uvenv completions`), uvenv completes:
 
 - Subcommands (`uvenv <TAB>`)
 - Env names (`uvenv activate <TAB>`, `uvenv remove <TAB>`)
-- Installed Pythons (`uvenv create -n foo --python <TAB>`)
+- Installed Pythons (`uvenv create --python=<TAB> -n foo`)
 - `uvenv tool` subcommands and `--python` values
 - `uvenv update` flags
 - `uvenv completions bash|zsh`
@@ -426,7 +446,7 @@ curl -fsSL https://github.com/sidhanthapoddar99/uvenv/releases/latest/download/i
 `uvenv list` to confirm the name. Envs live under `$UVENV_HOME` (default
 `~/.uvenv`); make sure you didn't move that directory.
 
-### `uvenv tool install --python` left mise on the wrong Python
+### `uvenv tool --python=X.Y install` left mise on the wrong Python
 
 The restore should always run, but if you killed the shell hard (e.g.
 `kill -9`) before the EXIT trap fired, run:
