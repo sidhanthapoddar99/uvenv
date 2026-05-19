@@ -115,6 +115,43 @@ jobs:
           echo "tool --python honors version OK"
           uv tool uninstall ruff || true
 
+          # Regression: inheriting $VIRTUAL_ENV in a child shell whose
+          # $PATH was rebuilt (e.g. by mise) must still resolve `python`
+          # to the venv. Without the v0.2.5 fix, this child shell would
+          # have a venv name but `python` pointing at mise's.
+          uvenv create -y -n childvenv
+          uvenv activate childvenv
+          venv_python_expected="$VIRTUAL_ENV/bin/python"
+          # Simulate a child shell where mise rebuilt PATH without the venv
+          out=$(bash -c '
+              export VIRTUAL_ENV="'"$VIRTUAL_ENV"'"
+              # Drop the venv bin from PATH to simulate mises rebuild
+              export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+              source "$HOME/.config/uvenv/uvenv.sh"
+              which python
+          ')
+          if [ "$out" != "$venv_python_expected" ]; then
+            echo "REGRESSION: child-shell PATH consistency broken"
+            echo "  expected: $venv_python_expected"
+            echo "  got:      $out"
+            exit 1
+          fi
+          echo "child-shell PATH consistency OK"
+          uvenv deactivate
+          uvenv remove childvenv
+
+          # Regression: stale $VIRTUAL_ENV pointing at a deleted venv
+          # must be cleaned up when uvenv.sh is sourced.
+          out=$(bash -c '
+              export VIRTUAL_ENV="/tmp/definitely-does-not-exist-$RANDOM"
+              source "$HOME/.config/uvenv/uvenv.sh"
+              echo "VIRTUAL_ENV=[${VIRTUAL_ENV:-unset}]"
+          ')
+          if [ "$out" != "VIRTUAL_ENV=[unset]" ]; then
+            echo "REGRESSION: stale VIRTUAL_ENV not cleaned up ($out)"; exit 1
+          fi
+          echo "stale VIRTUAL_ENV cleanup OK"
+
           # local venv
           uvenv create --python=3.13 -y -l ./localvenv
           uvenv activate ./localvenv

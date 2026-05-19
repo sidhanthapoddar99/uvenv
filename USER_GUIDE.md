@@ -468,6 +468,22 @@ uvenv always runs `mise exec python@X.Y -- uv venv ...`, so the exact patch
 version mise picks (e.g. `3.13.13` for `--python=3.13`) is what ends up in the
 venv. To pin further, pass the full version: `--python=3.13.13`.
 
+### Child shell (`zsh` / `bash`) has the venv name but wrong `python`
+
+Symptom: you `uvenv activate ml`, then type `zsh` to spawn a child shell.
+The prompt still shows `ml` (correct — `$VIRTUAL_ENV` was inherited from the
+parent), but `which python` resolves to mise's python, not the venv's.
+
+Cause: the child shell inherits `$VIRTUAL_ENV` and `$PATH` from the parent,
+but `.zshrc` re-runs the mise activate hook, which rebuilds `$PATH` from
+mise's own config — dropping the venv's `bin/` along the way.
+
+Fix: handled automatically since v0.2.5. When `uvenv.sh` is sourced and
+`$VIRTUAL_ENV` is set, uvenv re-prepends the venv's `bin/` to `$PATH` so
+that `python` resolves consistently with what the prompt shows. (Make sure
+`uvenv.sh` is sourced from your `.zshrc` AFTER mise's activate line so it
+runs last.) Run `uvenv version` to confirm you're on 0.2.5+.
+
 ### Prompt still shows a venv after `uvenv deactivate`
 
 If `which python` and `python --version` look correct (point at mise's python,

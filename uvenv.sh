@@ -87,6 +87,33 @@ uvenv() {
     "$fn" "$@"
 }
 
+# ───── inherited-venv consistency ─────
+# If $VIRTUAL_ENV was inherited from a parent shell (e.g. you ran
+# `uvenv activate ml` then typed `zsh`), the child shell might have a
+# rebuilt $PATH that no longer puts $VIRTUAL_ENV/bin first — for instance,
+# mise's activate hook reconstructs $PATH from its own tool config and
+# doesn't know about uvenv venvs. The result is an inconsistent state:
+# $VIRTUAL_ENV is set (so powerlevel10k shows the venv) but `python`
+# resolves to mise's instead of the venv's.
+#
+# Restore consistency by re-prepending $VIRTUAL_ENV/bin. If the venv
+# directory no longer exists (deleted in another shell), unset $VIRTUAL_ENV.
+if [ -n "${VIRTUAL_ENV:-}" ]; then
+    if [ ! -d "$VIRTUAL_ENV/bin" ]; then
+        unset VIRTUAL_ENV
+    else
+        case ":$PATH:" in
+            :"$VIRTUAL_ENV/bin":*) ;;  # already first — consistent, no-op
+            *)
+                PATH="$(printf '%s' "$PATH" | awk -v RS=: -v ORS=: -v bad="$VIRTUAL_ENV/bin" '$0 != bad' | sed 's/:$//')"
+                PATH="$VIRTUAL_ENV/bin:$PATH"
+                export PATH
+                hash -r 2>/dev/null || true
+                ;;
+        esac
+    fi
+fi
+
 # ───── auto-enable tab completion ─────
 # Sourced from the user's rc, so the user gets completion for free as soon
 # as they install uvenv — no extra `eval "$(uvenv completions ...)"` step.
