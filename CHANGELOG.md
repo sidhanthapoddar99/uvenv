@@ -163,49 +163,38 @@ UVENV_PREFIX="$PWD/src" source ./src/uvenv.sh
 
 ## [0.2.1] - 2026-05-19
 
-### Added
-
-- New subcommands:
-  - `uvenv exec <name|path> -- <cmd>...` — run a command in an env without
-    activating in this shell.
-  - `uvenv freeze [<name|path>]` — `uv pip freeze` for the active or named env.
-  - `uvenv doctor` — PASS/FAIL sanity check of deps + install + rc integration.
-  - `uvenv tool upgrade <pkg> | --all` — wraps `uv tool upgrade`.
-- `SECURITY.md`, `.github/ISSUE_TEMPLATE/{bug,feature,config}`,
-  `.github/PULL_REQUEST_TEMPLATE.md` — first-class GitHub community files.
-- `DESIGN.md` — extracted from the README. Why-it-works-this-way notes.
-- macOS smoke test in CI alongside ubuntu (no Windows native — uvenv requires
-  bash/zsh).
-- VHS `.tape` files in `demo/` for a 30-second tour and a side-by-side
-  comparison with conda. Generated GIFs are not committed.
-
-### Changed
-
-- README slimmed to quick-start + install + 5-line tour; links out to
-  USER_GUIDE / CONTRIBUTING / DESIGN / SECURITY.
-- `uvenv info` rewritten as a detailed translation map (uvenv → mise/uv
-  call), with explicit safety-rail callouts.
-
-## [0.2.0] - 2026-05-19
+The first big release after `0.1.0`: a full modular refactor of the
+single-file 0.1.0 script, plus a batch of new subcommands and first-class
+GitHub community files. There is no separate `0.2.0` tag — the modular
+refactor and the new subcommands shipped together as `0.2.1`.
 
 ### Added
 
 - **Modular refactor.** `uvenv.sh` becomes a thin (~70-line) dispatcher that
   lazy-sources `lib/<cmd>.sh` on first use, caching across the shell session.
   Shell startup cost stays flat as the command surface grows.
-- 8 new subcommands:
+- New subcommands:
   - `uvenv info` — cheat sheet of underlying mise + uv commands
-  - `uvenv tool install/uninstall/list [--python X.Y]`
-  - `uvenv list` enhanced — global venvs, local venvs in cwd, available mise pythons
+  - `uvenv tool install / uninstall / list / upgrade [--python X.Y]`
+  - `uvenv list` (sectioned) — global venvs, local venvs in cwd, available mise pythons
   - `uvenv set --python X.Y`
   - `uvenv status`
+  - `uvenv doctor` — PASS/FAIL sanity check of deps + install + rc integration
+  - `uvenv exec <name|path> -- <cmd>...` — run in an env without activating
+  - `uvenv freeze [<name|path>]` — uv pip freeze for active or named env
   - `uvenv update <pkg>... | --all | --self`
   - `uvenv install -y` flag for unattended use
   - `uvenv completions {bash|zsh}`
-- Bash + zsh completion scripts.
-- `docs/USER_GUIDE.md` and `CONTRIBUTING.md`.
 - `uvenv create -l <path>` for local (non-`$UVENV_HOME`) venvs.
 - `uvenv activate` and `uvenv remove` accept either a name or a path.
+- Bash + zsh completion scripts.
+- `USER_GUIDE.md`, `CONTRIBUTING.md`, `DESIGN.md`.
+- `SECURITY.md`, `.github/ISSUE_TEMPLATE/{bug,feature,config}`,
+  `.github/PULL_REQUEST_TEMPLATE.md` — first-class GitHub community files.
+- macOS smoke test in CI alongside ubuntu (no Windows native — uvenv
+  requires bash/zsh).
+- VHS `.tape` files in `demo/` for a 30-second tour and a side-by-side
+  comparison with conda. Generated GIFs are not committed.
 
 ### Changed
 
@@ -214,6 +203,10 @@ UVENV_PREFIX="$PWD/src" source ./src/uvenv.sh
   tarball so `uvenv self-update` reuses it.
 - `VERSION` file becomes the single source of truth, read at runtime by
   `uvenv.sh`.
+- README slimmed to quick-start + install + 5-line tour; links out to
+  USER_GUIDE / CONTRIBUTING / DESIGN / SECURITY.
+- `uvenv info` rewritten as a detailed translation map (uvenv → mise/uv
+  call), with explicit safety-rail callouts.
 
 ## [0.1.0] - 2026-05-18
 
@@ -232,5 +225,4 @@ UVENV_PREFIX="$PWD/src" source ./src/uvenv.sh
 [0.2.3]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.2.3
 [0.2.2]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.2.2
 [0.2.1]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.2.1
-[0.2.0]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.2.0
 [0.1.0]: https://github.com/sidhanthapoddar99/uvenv/releases/tag/v0.1.0
