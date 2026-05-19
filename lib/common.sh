@@ -18,6 +18,9 @@ else
     _uvenv__use_color=0
 fi
 
+# _UVENV_C_* are referenced by lib/*.sh files via $-interpolation; shellcheck
+# can't see across sourced files.
+# shellcheck disable=SC2034
 if [ "$_uvenv__use_color" -eq 1 ]; then
     _UVENV_C_RED=$'\033[31m'
     _UVENV_C_GREEN=$'\033[32m'

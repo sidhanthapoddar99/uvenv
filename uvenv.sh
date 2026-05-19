@@ -13,6 +13,9 @@ UVENV_PREFIX="${UVENV_PREFIX:-$HOME/.config/uvenv}"
 UVENV_LIB="${UVENV_LIB:-$UVENV_PREFIX/lib}"
 UVENV_REPO="${UVENV_REPO:-sidhanthapoddar99/uvenv}"
 
+# UVENV_VERSION is consumed by lib/help.sh, lib/info.sh, lib/doctor.sh.
+# Sourced files share scope; shellcheck can't see across files.
+# shellcheck disable=SC2034
 if [ -f "$UVENV_PREFIX/VERSION" ]; then
     UVENV_VERSION="$(cat "$UVENV_PREFIX/VERSION" 2>/dev/null)"
 else
@@ -45,25 +48,27 @@ uvenv() {
         fi
     fi
 
-    # Map subcommand -> lib file (some commands share one file)
+    # Map subcommand -> lib file (some commands share one file).
+    # Values are quoted because words like `exec` are also shell builtins
+    # and shellcheck warns about them looking like `var=$(exec)`.
     local libfile
     case "$cmd" in
-        create)              libfile=create ;;
-        activate|deactivate) libfile=activate ;;
-        list)                libfile=list ;;
-        remove)              libfile=remove ;;
-        install)             libfile=install_pkg ;;
-        which)               libfile=which ;;
-        version|help)        libfile=help ;;
-        info)                libfile=info ;;
-        status)              libfile=status ;;
-        set)                 libfile=set ;;
-        tool)                libfile=tool ;;
-        update|self-update)  libfile=update ;;
-        completions)         libfile=completions ;;
-        exec)                libfile=exec ;;
-        freeze)              libfile=freeze ;;
-        doctor)              libfile=doctor ;;
+        create)              libfile="create" ;;
+        activate|deactivate) libfile="activate" ;;
+        list)                libfile="list" ;;
+        remove)              libfile="remove" ;;
+        install)             libfile="install_pkg" ;;
+        which)               libfile="which" ;;
+        version|help)        libfile="help" ;;
+        info)                libfile="info" ;;
+        status)              libfile="status" ;;
+        set)                 libfile="set" ;;
+        tool)                libfile="tool" ;;
+        update|self-update)  libfile="update" ;;
+        completions)         libfile="completions" ;;
+        exec)                libfile="exec" ;;
+        freeze)              libfile="freeze" ;;
+        doctor)              libfile="doctor" ;;
         *)
             _uvenv_log error "unknown command '$cmd'. Try: uvenv help"
             return 1

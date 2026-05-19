@@ -16,6 +16,10 @@ jobs:
         with:
           severity: warning
           scandir: '.'
+          # uvenv.zsh uses zsh-specific syntax (associative array indexing,
+          # ${(@f)…} flag expansions) that shellcheck doesn't understand;
+          # zsh -n in the smoke job covers syntax for that file.
+          ignore_names: uvenv.zsh
 
   smoke-test:
     strategy:
