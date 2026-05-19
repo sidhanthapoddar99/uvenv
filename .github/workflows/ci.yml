@@ -27,26 +27,44 @@ jobs:
           curl https://mise.run | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Install uv via mise
+      - name: Install uv + python via mise
         run: |
           eval "$($HOME/.local/bin/mise activate bash)"
           mise use -g uv@latest
           mise use -g python@3.13
 
-      - name: Source uvenv and run smoke tests
+      - name: Stage uvenv as if installed
+        run: |
+          # Mirror the layout install.sh produces, so uvenv.sh finds its
+          # lib/ + completions/ relative to UVENV_PREFIX.
+          STAGE="$HOME/.config/uvenv"
+          mkdir -p "$STAGE"
+          cp -r uvenv.sh install.sh VERSION lib completions "$STAGE/"
+          ls -la "$STAGE"
+
+      - name: Smoke test the modular layout
         run: |
           eval "$($HOME/.local/bin/mise activate bash)"
           # shellcheck disable=SC1091
-          source ./uvenv.sh
+          source "$HOME/.config/uvenv/uvenv.sh"
 
-          uvenv help
           uvenv version
+          uvenv help
+          uvenv info
+          uvenv status
+
           uvenv list
+
           uvenv create -n smoketest
           uvenv list
           uvenv activate smoketest
+          uvenv status
           uvenv install requests
           python -c "import requests; print(requests.__version__)"
+          uvenv update --all || true
           uvenv deactivate
           uvenv remove smoketest
+
+          uvenv completions bash | head -5
+          uvenv completions zsh  | head -5
           echo "OK"

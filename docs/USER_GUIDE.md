@@ -1,0 +1,370 @@
+# uvenv user guide
+
+A friendly tour of every uvenv command, with the underlying `mise` / `uv`
+commands shown alongside so you always know what's happening beneath the wrapper.
+
+> Quick reference: `uvenv info` prints a one-screen cheat sheet of every mise +
+> uv command uvenv composes.
+
+## Contents
+
+1. [Mental model](#mental-model)
+2. [Install](#install)
+3. [Layout on disk](#layout-on-disk)
+4. [Concepts: base Python vs. venv](#concepts-base-python-vs-venv)
+5. [Command reference](#command-reference)
+6. [Common workflows](#common-workflows)
+7. [Tab completion](#tab-completion)
+8. [Updating uvenv](#updating-uvenv)
+9. [Troubleshooting](#troubleshooting)
+
+---
+
+## Mental model
+
+```
+┌──────────┐   manages Python versions       ┌──────────────────────────────┐
+│   mise   │ ───────────────────────────────►│  ~/.local/share/mise/...     │
+└──────────┘                                 │  python/3.12, python/3.13... │
+     ▲                                       └──────────────────────────────┘
+     │ "use this Python"
+     │
+┌──────────┐   creates a venv against         ┌──────────────────────────────┐
+│   uvenv  │ ──────────────────────────────►  │  ~/.uvenv/<name>/            │
+└──────────┘   mise's chosen Python           │  (regular Python venv)       │
+                                              └──────────────────────────────┘
+```
+
+`uvenv` is glue between `mise` (the Python version manager) and `uv` (the venv
++ package installer). It adds one thing neither has on its own: **named global
+Python venvs you can activate from anywhere**, conda-style.
+
+## Install
+
+```bash
+curl -fsSL https://github.com/sidhanthapoddar99/uvenv/releases/latest/download/install.sh | bash
+```
+
+The installer:
+
+1. Verifies `mise`, `uv`, `curl`, and `tar` are installed.
+2. Downloads `uvenv-<tag>.tar.gz` from the latest GitHub release.
+3. Extracts to `~/.config/uvenv/` (override with `UVENV_PREFIX`).
+4. Backs up any previous install to `~/.config/uvenv.bak`.
+5. Adds a `source ~/.config/uvenv/uvenv.sh` line to your `.bashrc` / `.zshrc`.
+
+Open a new shell, then run:
+
+```bash
+uvenv version
+uvenv help
+```
+
+### Install options
+
+| Env var | Default | Meaning |
+| --- | --- | --- |
+| `UVENV_VERSION` | `latest` | Pin a release tag (e.g. `v0.2.0`) |
+| `UVENV_REF` | *(unset)* | Install from a branch/commit instead of a release |
+| `UVENV_PREFIX` | `~/.config/uvenv` | Install dir |
+| `UVENV_REPO` | `sidhanthapoddar99/uvenv` | Source repo |
+
+```bash
+# Install from main branch (bleeding edge)
+UVENV_REF=main curl -fsSL \
+  https://raw.githubusercontent.com/sidhanthapoddar99/uvenv/main/install.sh | bash
+```
+
+## Layout on disk
+
+```
+~/.config/uvenv/             ← UVENV_PREFIX (the installation)
+├── uvenv.sh                 ← thin dispatcher, sourced from rc
+├── install.sh               ← bundled, called by `uvenv self-update`
+├── VERSION
+├── lib/                     ← per-subcommand shell modules, lazy-loaded
+│   ├── common.sh
+│   ├── create.sh
+│   ├── activate.sh
+│   ├── list.sh
+│   └── ...
+└── completions/
+    ├── uvenv.bash
+    └── uvenv.zsh
+
+~/.uvenv/                    ← UVENV_HOME (your envs live here)
+├── ml/
+├── scratch/
+└── ...
+```
+
+`UVENV_PREFIX` holds uvenv itself; `UVENV_HOME` holds your venvs. They are
+independent, so reinstalling / updating uvenv never touches your envs.
+
+## Concepts: base Python vs. venv
+
+- **Base Python**: the Python that mise resolves on your `PATH` right now —
+  shown by `mise current python`. Whatever `python` runs when no venv is active.
+- **uvenv venv**: a regular Python venv created against a specific mise Python,
+  living at `~/.uvenv/<name>/`. Activate it and `python` becomes that venv's.
+
+`uvenv install <pkg>` always tries to do the safe thing:
+
+- **Inside a venv** → installs into that venv (`uv pip install`).
+- **No venv active** → warns you and asks for confirmation before doing a
+  `uv pip install --system` into the base mise Python. Skip the prompt with
+  `uvenv install -y <pkg>`.
+
+## Command reference
+
+### Environments
+
+#### `uvenv create -n <name> [--python X.Y]`
+
+```bash
+uvenv create -n ml --python 3.13
+```
+
+Equivalent to:
+
+```bash
+mise install python@3.13
+mise exec python@3.13 -- uv venv ~/.uvenv/ml
+```
+
+If `--python` is omitted, uvenv uses whatever Python mise currently resolves.
+
+#### `uvenv activate <name>` / `uvenv deactivate`
+
+Sources the venv's `bin/activate` (or runs `deactivate`). Works only because
+uvenv is a sourced shell function — a binary couldn't mutate your shell.
+
+#### `uvenv list`
+
+Three sections:
+
+```
+Global venvs (~/.uvenv)
+    NAME                 PYTHON     BASE
+  * ml                   3.13.13    ~/.local/share/mise/installs/python/3.13/bin
+    scratch              3.12.7     ~/.local/share/mise/installs/python/3.12/bin
+
+Local venvs (/current/dir)
+  (none here)
+
+Available mise pythons
+  python  3.12.13
+  python  3.13.13  ~/.config/mise/config.toml  3.13
+  python  3.14.5
+```
+
+A leading `*` marks the active env.
+
+#### `uvenv remove <name>`
+
+Deletes `~/.uvenv/<name>`. Refuses if it's the active env (`uvenv deactivate`
+first).
+
+### Packages
+
+#### `uvenv install [-y] <pkg>...`
+
+Forwards args to `uv pip install`. Refuses to touch the base Python without
+confirmation (or `-y`).
+
+```bash
+uvenv install numpy pandas
+uvenv install -r requirements.txt
+uvenv install -e .
+```
+
+#### `uvenv update <pkg>... | --all`
+
+`uv pip install --upgrade <pkg>`. With `--all`, upgrades everything that
+`uv pip list --outdated` flags.
+
+```bash
+uvenv update numpy
+uvenv update --all
+```
+
+### uv tools (`uvenv tool ...`)
+
+Wraps `uv tool install` and (importantly) lets you pin a Python version per
+install, by temporarily switching the global mise Python and **restoring it
+afterwards** even on failure or Ctrl+C.
+
+```bash
+uvenv tool install ruff
+uvenv tool install yt-dlp --python 3.13   # uses 3.13, then restores prior
+uvenv tool list
+uvenv tool uninstall yt-dlp
+```
+
+Under the hood (with `--python`):
+
+```bash
+prev=$(mise current python)
+mise use -g python@3.13
+uv tool install yt-dlp
+mise use -g python@$prev      # always runs, even on failure (EXIT trap)
+```
+
+### Python version (`mise`) shortcuts
+
+#### `uvenv set --python X.Y`
+
+```bash
+uvenv set --python 3.14    # ≡ mise install python@3.14 + mise use -g python@3.14
+```
+
+### Status & info
+
+#### `uvenv status`
+
+```
+uvenv 0.2.0
+
+mise
+  binary:  /home/you/.local/bin/mise
+  version: 2026.4.27
+  python:  3.13.13
+
+uv
+  binary:  /home/you/.local/share/mise/installs/uv/.../uv
+  version: uv 0.11.15
+
+Active venv
+  name:    ml   (uvenv-managed)
+  path:    /home/you/.uvenv/ml
+  python:  3.13.13
+  base:    /home/you/.local/share/mise/installs/python/3.13/bin
+```
+
+If no venv is active, the last section says so explicitly.
+
+#### `uvenv info`
+
+A cheat sheet of every `mise` / `uv` command uvenv composes. Read it once;
+you'll mostly stop needing to look up flags.
+
+### Maintenance
+
+#### `uvenv update --self`  (alias: `uvenv self-update`)
+
+Re-runs the bundled installer to pull the latest release. Your envs in
+`~/.uvenv/` are untouched.
+
+#### `uvenv which`
+
+Prints `$UVENV_HOME` — where your envs live.
+
+#### `uvenv completions {bash|zsh}`
+
+Prints a completion script for the named shell. Pipe to `eval`:
+
+```bash
+# in ~/.bashrc
+eval "$(uvenv completions bash)"
+
+# in ~/.zshrc
+eval "$(uvenv completions zsh)"
+```
+
+## Common workflows
+
+### Try out a new Python release
+
+```bash
+uvenv set --python 3.14            # mise grabs 3.14, makes it global default
+uvenv create -n play314 --python 3.14
+uvenv activate play314
+uvenv install ipython
+```
+
+### Multiple project envs, switch on demand
+
+```bash
+uvenv create -n api --python 3.12
+uvenv create -n notebook --python 3.13
+uvenv activate api
+# work on api...
+uvenv deactivate
+uvenv activate notebook
+```
+
+### Install a CLI tool against a non-default Python
+
+```bash
+uvenv tool install scrapy --python 3.12   # scrapy needs 3.12 today
+# mise's global python stays whatever it was before
+```
+
+### Clean break: nuke everything and start over
+
+```bash
+uvenv deactivate
+rm -rf ~/.uvenv               # all envs (your data)
+rm -rf ~/.config/uvenv        # uvenv itself
+# remove the source line from ~/.bashrc / ~/.zshrc
+```
+
+## Tab completion
+
+Once enabled (see `uvenv completions`), uvenv completes:
+
+- Subcommands (`uvenv <TAB>`)
+- Env names (`uvenv activate <TAB>`, `uvenv remove <TAB>`)
+- Installed Pythons (`uvenv create -n foo --python <TAB>`)
+- `uvenv tool` subcommands and `--python` values
+- `uvenv update` flags
+- `uvenv completions bash|zsh`
+
+## Updating uvenv
+
+```bash
+uvenv self-update          # or: uvenv update --self
+```
+
+This runs the installer bundled inside your install directory. It downloads the
+latest release tarball, swaps the install dir atomically, and keeps one
+previous version at `~/.config/uvenv.bak` for rollback.
+
+If for some reason the bundled installer is missing, uvenv falls back to
+curling the latest `install.sh` from GitHub.
+
+## Troubleshooting
+
+### `uvenv: lib not found at ~/.config/uvenv/lib`
+
+You have an old (pre-0.2) install (single `uvenv.sh` file). Re-install:
+
+```bash
+curl -fsSL https://github.com/sidhanthapoddar99/uvenv/releases/latest/download/install.sh | bash
+```
+
+### `uvenv activate` says "not found"
+
+`uvenv list` to confirm the name. Envs live under `$UVENV_HOME` (default
+`~/.uvenv`); make sure you didn't move that directory.
+
+### `uvenv tool install --python` left mise on the wrong Python
+
+The restore should always run, but if you killed the shell hard (e.g.
+`kill -9`) before the EXIT trap fired, run:
+
+```bash
+mise current python              # check current
+mise use -g python@<prev>        # restore manually
+```
+
+### `uvenv install` refuses without `-y`
+
+That's by design when no venv is active — installing into the base mise Python
+modifies the global site-packages. Either activate a venv first, or pass `-y`.
+
+### Python from `uvenv create` doesn't match what mise has
+
+uvenv always runs `mise install python@X.Y` before creating the venv, so the
+exact patch version mise picks (e.g. `3.13.13` for `--python 3.13`) is what
+ends up in the venv. To pin further, pass the full version: `--python 3.13.13`.

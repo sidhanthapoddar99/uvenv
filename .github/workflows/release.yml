@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag like v0.1.0 to cut a release.
+# Push a tag like v0.2.0 to cut a release.
 # Manual dispatch lets you re-cut a release from a tag that already exists.
 on:
   push:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g. v0.1.0)'
+        description: 'Tag to release (e.g. v0.2.0)'
         required: true
 
 permissions:
@@ -34,19 +34,20 @@ jobs:
             echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Sanity-check uvenv.sh
+      - name: Sanity-check repo
         run: |
           test -f uvenv.sh
           test -f install.sh
-          # Must contain the function definition
+          test -f VERSION
+          test -d lib
+          test -d completions
           grep -q '^uvenv() {' uvenv.sh
-          # Version line should match the tag (with or without 'v' prefix)
+
           TAG="${{ steps.tag.outputs.name }}"
           BARE="${TAG#v}"
-          if ! grep -qE "^UVENV_VERSION=\"${BARE}\"" uvenv.sh; then
-            echo "::warning::UVENV_VERSION in uvenv.sh does not match tag ${TAG}"
-            echo "         Expected: UVENV_VERSION=\"${BARE}\""
-            grep '^UVENV_VERSION=' uvenv.sh || true
+          VFILE="$(tr -d '[:space:]' < VERSION)"
+          if [ "$VFILE" != "$BARE" ]; then
+            echo "::warning::VERSION file ($VFILE) does not match tag ($BARE)"
           fi
 
       - name: Shellcheck
@@ -56,11 +57,25 @@ jobs:
           scandir: '.'
         continue-on-error: true
 
+      - name: Build tarball
+        run: |
+          TAG="${{ steps.tag.outputs.name }}"
+          STAGE="uvenv-${TAG}"
+          mkdir -p "$STAGE"
+          cp -r uvenv.sh install.sh VERSION LICENSE lib completions "$STAGE/"
+          [ -d docs ] && cp -r docs "$STAGE/"
+          tar -czf "uvenv-${TAG}.tar.gz" "$STAGE"
+          ls -lh "uvenv-${TAG}.tar.gz"
+          tar -tzf "uvenv-${TAG}.tar.gz" | head -20
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.tag.outputs.name }}" \
-            --title "${{ steps.tag.outputs.name }}" \
+          TAG="${{ steps.tag.outputs.name }}"
+          gh release create "$TAG" \
+            --title "$TAG" \
             --generate-notes \
-            uvenv.sh install.sh LICENSE
+            "uvenv-${TAG}.tar.gz" \
+            install.sh \
+            LICENSE
