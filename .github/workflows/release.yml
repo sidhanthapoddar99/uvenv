@@ -62,19 +62,51 @@ jobs:
           TAG="${{ steps.tag.outputs.name }}"
           STAGE="uvenv-${TAG}"
           mkdir -p "$STAGE"
-          cp -r uvenv.sh install.sh VERSION LICENSE USER_GUIDE.md lib completions "$STAGE/"
+          cp -r uvenv.sh install.sh VERSION LICENSE USER_GUIDE.md CHANGELOG.md lib completions "$STAGE/"
           tar -czf "uvenv-${TAG}.tar.gz" "$STAGE"
           ls -lh "uvenv-${TAG}.tar.gz"
           tar -tzf "uvenv-${TAG}.tar.gz" | head -20
+
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        run: |
+          TAG="${{ steps.tag.outputs.name }}"
+          BARE="${TAG#v}"
+          # Capture everything under `## [X.Y.Z]` up to (but not including)
+          # the next `## [` heading. Strips the link-reference footer too.
+          awk -v ver="$BARE" '
+            $0 ~ "^## \\[" ver "\\]"   { capture = 1; next }
+            capture && /^## \[/        { exit }
+            capture                    { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if [ ! -s release-notes.md ]; then
+            echo "::warning::No CHANGELOG.md entry found for ${BARE}; falling back to auto-generated notes"
+            echo "have_notes=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_notes=1" >> "$GITHUB_OUTPUT"
+            echo "----- release-notes.md -----"
+            cat release-notes.md
+            echo "----------------------------"
+          fi
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ steps.tag.outputs.name }}"
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --generate-notes \
-            "uvenv-${TAG}.tar.gz" \
-            install.sh \
-            LICENSE
+          if [ "${{ steps.notes.outputs.have_notes }}" = "1" ]; then
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes-file release-notes.md \
+              "uvenv-${TAG}.tar.gz" \
+              install.sh \
+              LICENSE
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --generate-notes \
+              "uvenv-${TAG}.tar.gz" \
+              install.sh \
+              LICENSE
+          fi

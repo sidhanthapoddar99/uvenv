@@ -39,13 +39,19 @@ uvenv() {
     # `typeset -f <name>` works in both bash and zsh ("does this function
     # exist?"). NB: do NOT use `declare -F` — in zsh that means "declare
     # a float variable" and silently creates one, returning 0.
+    #
+    # IMPORTANT: do NOT redirect stderr on this source. common.sh runs
+    # `[ -t 2 ]` to detect colour support; redirecting fd 2 here would
+    # make it think stderr isn't a tty and disable colours permanently
+    # for the shell session.
     if ! typeset -f _uvenv_log >/dev/null 2>&1; then
-        # shellcheck disable=SC1090,SC1091
-        if ! . "$UVENV_LIB/common.sh" 2>/dev/null; then
+        if [ ! -f "$UVENV_LIB/common.sh" ]; then
             printf 'uvenv: lib not found at %s\n' "$UVENV_LIB" >&2
             printf '       try reinstalling: curl -fsSL https://github.com/%s/releases/latest/download/install.sh | bash\n' "$UVENV_REPO" >&2
             return 1
         fi
+        # shellcheck disable=SC1090,SC1091
+        . "$UVENV_LIB/common.sh"
     fi
 
     # Map subcommand -> lib file (some commands share one file).
@@ -78,11 +84,12 @@ uvenv() {
     # Function name = _uvenv_<cmd> with dashes -> underscores (self-update)
     local fn="_uvenv_${cmd//-/_}"
     if ! typeset -f "$fn" >/dev/null 2>&1; then
-        # shellcheck disable=SC1090
-        if ! . "$UVENV_LIB/${libfile}.sh" 2>/dev/null; then
+        if [ ! -f "$UVENV_LIB/${libfile}.sh" ]; then
             _uvenv_log error "lib missing: $UVENV_LIB/${libfile}.sh"
             return 1
         fi
+        # shellcheck disable=SC1090
+        . "$UVENV_LIB/${libfile}.sh"
     fi
     "$fn" "$@"
 }
