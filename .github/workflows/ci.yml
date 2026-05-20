@@ -7,6 +7,26 @@ on:
   workflow_dispatch:
 
 jobs:
+  plugin-version-coupling:
+    # The Claude Code plugin in plugin/ ships a skill describing uvenv to
+    # AI agents. Its plugin.json `version` must match src/VERSION so that
+    # marketplace consumers always get a skill version matching the shell
+    # tool. Failing this gate means a release was started with one of the
+    # two files un-bumped.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert src/VERSION == plugin/.claude-plugin/plugin.json version
+        run: |
+          SHELL_VER="$(tr -d '[:space:]' < src/VERSION)"
+          PLUGIN_VER="$(python3 -c 'import json,sys; print(json.load(open("plugin/.claude-plugin/plugin.json"))["version"])')"
+          echo "src/VERSION       = $SHELL_VER"
+          echo "plugin.json version = $PLUGIN_VER"
+          if [ "$SHELL_VER" != "$PLUGIN_VER" ]; then
+            echo "::error::Version mismatch — bump plugin/.claude-plugin/plugin.json to $SHELL_VER"
+            exit 1
+          fi
+
   shellcheck:
     runs-on: ubuntu-latest
     steps:

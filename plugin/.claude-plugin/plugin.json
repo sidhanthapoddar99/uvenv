@@ -1,0 +1,13 @@
+{
+  "name": "uvenv",
+  "description": "Claude skill for uvenv — the bash/zsh wrapper that gives mise + uv conda-style named global Python venvs you can activate from anywhere.",
+  "version": "0.3.0",
+  "author": {
+    "name": "Sidhantha Poddar",
+    "url": "https://github.com/sidhanthapoddar99"
+  },
+  "homepage": "https://github.com/sidhanthapoddar99/uvenv",
+  "repository": "https://github.com/sidhanthapoddar99/uvenv",
+  "license": "MIT",
+  "keywords": ["python", "venv", "mise", "uv", "conda-replacement", "shell"]
+}

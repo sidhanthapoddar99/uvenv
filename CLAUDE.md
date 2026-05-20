@@ -32,6 +32,11 @@ DESIGN.md                 why uvenv is shaped the way it is
 SECURITY.md               disclosure policy
 .github/workflows/        ci.yml (shellcheck + smoke on linux+mac+zsh), release.yml
 demo/                     VHS tape files (regenerate GIFs locally)
+plugin/                   Claude Code plugin — distributed via
+  .claude-plugin/           sids-plugin-marketplace; version coupled to
+    plugin.json             src/VERSION (CI gate enforces). The plugin
+  skills/uvenv/SKILL.md     ships a single skill teaching Claude how to
+                            help users with uvenv.
 ```
 
 The installed layout at `$UVENV_PREFIX` is **flat** — `uvenv.sh`, `VERSION`,
@@ -59,18 +64,23 @@ organisational thing; the release tarball flattens it.
 
 **Every release must:**
 
-1. Bump `VERSION` to the new number.
-2. **Update `CHANGELOG.md`** with a new `## [X.Y.Z] - YYYY-MM-DD` block,
+1. Bump `src/VERSION` to the new number.
+2. Bump `plugin/.claude-plugin/plugin.json` `"version"` to match
+   `src/VERSION`. CI fails the build if these drift — they are coupled
+   so that marketplace consumers always get a skill version matching the
+   shell tool they're getting help with.
+3. **Update `CHANGELOG.md`** with a new `## [X.Y.Z] - YYYY-MM-DD` block,
    grouped under Added / Changed / Fixed / Removed (Keep-a-Changelog style).
    This is non-negotiable — see the changelog policy below.
-3. Commit with a release-grade message: header `vX.Y.Z: <one-line summary>`,
+4. Commit with a release-grade message: header `vX.Y.Z: <one-line summary>`,
    body mirroring the changelog groupings with rationale.
-4. Push main, then `git tag -a vX.Y.Z -m "uvenv vX.Y.Z — <summary>"`,
+5. Push main, then `git tag -a vX.Y.Z -m "uvenv vX.Y.Z — <summary>"`,
    then `git push origin vX.Y.Z`.
-5. CI must be green on `main` (shellcheck + ubuntu + macos smoke).
-6. The release workflow (`release.yml`) auto-builds `uvenv-vX.Y.Z.tar.gz`
+6. CI must be green on `main` (shellcheck + ubuntu + macos smoke +
+   version-coupling gate).
+7. The release workflow (`release.yml`) auto-builds `uvenv-vX.Y.Z.tar.gz`
    and uploads it alongside `install.sh` + `LICENSE` to the GitHub release.
-7. Verify the release tarball downloads and extracts before considering the
+8. Verify the release tarball downloads and extracts before considering the
    release done.
 
 ## Changelog policy (please honour this)
